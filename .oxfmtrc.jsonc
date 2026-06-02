@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "semi": false,
+  "printWidth": 100,
+  "trailingComma": "all",
+  "experimentalSortPackageJson": false,
+  "singleQuote": true,
+  "ignorePatterns": [
+    //
+    "AGENTS.md",
+    "CLAUDE.md",
+    "router.d.ts",
+    "pnpm-lock.yaml",
+  ],
+}

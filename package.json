@@ -10,6 +10,9 @@
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.5",
     "nitro": "latest",
+    "oxfmt": "^0.53.0",
+    "oxlint": "^1.68.0",
+    "oxlint-plugin-posva": "^0.0.2",
     "unhead": "^2.1.12",
     "vite": "latest",
     "vite-plugin-devtools-json": "^1.0.0",
