@@ -1,5 +1,5 @@
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
+import { defineConfig, type Plugin } from 'vite'
+import vue, { type Api } from '@vitejs/plugin-vue'
 import devtoolsJson from 'vite-plugin-devtools-json'
 import { nitro } from 'nitro/vite'
 
@@ -9,7 +9,7 @@ export default defineConfig((_env) => ({
     patchVueExclude(vue(), /\?assets/),
     devtoolsJson(),
     nitro({
-      // serverDir: './server',
+      serverDir: './server',
     }),
   ],
   environments: {
@@ -40,7 +40,10 @@ export default defineConfig((_env) => ({
 }))
 
 // Workaround https://github.com/vitejs/vite-plugin-vue/issues/677
-function patchVueExclude(plugin, exclude) {
+function patchVueExclude(plugin: Plugin<Api>, exclude: RegExp) {
+  if (typeof plugin.transform !== 'object' || !plugin.transform) {
+    throw new Error('Plugin does not have a transform handler to patch')
+  }
   const original = plugin.transform.handler
   plugin.transform.handler = function (...args) {
     if (exclude.test(args[1])) return
