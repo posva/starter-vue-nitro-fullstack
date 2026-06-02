@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
+    "fmt": "oxfmt",
+    "lint": "oxlint",
     "dev": "vite dev",
     "preview": "vite preview"
   },

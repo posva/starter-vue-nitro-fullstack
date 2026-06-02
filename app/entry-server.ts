@@ -1,49 +1,49 @@
-import { createSSRApp } from "vue";
-import { renderToString } from "vue/server-renderer";
-import { RouterView, createMemoryHistory, createRouter } from "vue-router";
-import { createHead, transformHtmlTemplate } from "unhead/server";
+import { createSSRApp } from 'vue'
+import { renderToString } from 'vue/server-renderer'
+import { RouterView, createMemoryHistory, createRouter } from 'vue-router'
+import { createHead, transformHtmlTemplate } from 'unhead/server'
 
-import { routes } from "./routes.ts";
+import { routes } from './routes.ts'
 
-import clientAssets from "./entry-client.ts?assets=client";
+import clientAssets from './entry-client.ts?assets=client'
 
 async function handler(request: Request): Promise<Response> {
-  const app = createSSRApp(RouterView);
-  const router = createRouter({ history: createMemoryHistory(), routes });
-  app.use(router);
+  const app = createSSRApp(RouterView)
+  const router = createRouter({ history: createMemoryHistory(), routes })
+  app.use(router)
 
-  const url = new URL(request.url);
-  const href = url.href.slice(url.origin.length);
+  const url = new URL(request.url)
+  const href = url.href.slice(url.origin.length)
 
-  await router.push(href);
-  await router.isReady();
+  await router.push(href)
+  await router.isReady()
 
   const assets = clientAssets.merge(
     ...(await Promise.all(
       router.currentRoute.value.matched
         .map((to) => to.meta.assets)
         .filter(Boolean)
-        .map((fn) => (fn as any)().then((m: any) => m.default))
-    ))
-  );
+        .map((fn) => (fn as any)().then((m: any) => m.default)),
+    )),
+  )
 
-  const head = createHead();
+  const head = createHead()
 
   head.push({
     link: [
-      ...assets.css.map((attrs: any) => ({ rel: "stylesheet", ...attrs })),
-      ...assets.js.map((attrs: any) => ({ rel: "modulepreload", ...attrs })),
+      ...assets.css.map((attrs: any) => ({ rel: 'stylesheet', ...attrs })),
+      ...assets.js.map((attrs: any) => ({ rel: 'modulepreload', ...attrs })),
     ],
-    script: [{ type: "module", src: clientAssets.entry }],
-  });
+    script: [{ type: 'module', src: clientAssets.entry }],
+  })
 
-  const renderedApp = await renderToString(app);
+  const renderedApp = await renderToString(app)
 
-  const html = await transformHtmlTemplate(head, htmlTemplate(renderedApp));
+  const html = await transformHtmlTemplate(head, htmlTemplate(renderedApp))
 
   return new Response(html, {
-    headers: { "Content-Type": "text/html;charset=utf-8" },
-  });
+    headers: { 'Content-Type': 'text/html;charset=utf-8' },
+  })
 }
 
 function htmlTemplate(body: string): string {
@@ -57,9 +57,9 @@ function htmlTemplate(body: string): string {
 <body>
   <div id="root">${body}</div>
 </body>
-</html>`;
+</html>`
 }
 
 export default {
   fetch: handler,
-};
+}
