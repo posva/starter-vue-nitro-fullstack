@@ -1,0 +1,17 @@
+node_modules
+coverage
+npm-debug.log
+yarn-error.log
+dist
+package-lock.json
+yarn.lock
+.DS_Store
+.pnpm-debug.log
+tsconfig.tsbuildinfo
+tsconfig.*.tsbuildinfo
+.osgrep
+.cursor
+.claude/worktrees
+.claude/settings.local.json
+.claude/plans
+.clack-session.json
