@@ -1,10 +1,11 @@
 import { createSSRApp } from 'vue'
-import { RouterView, createRouter, createWebHistory } from 'vue-router'
-import { routes } from './routes.ts'
+import { createWebHistory } from 'vue-router'
+import App from './app.vue'
+import { createAppRouter } from './router.ts'
 
 async function main() {
-  const app = createSSRApp(RouterView)
-  const router = createRouter({ history: createWebHistory(), routes })
+  const app = createSSRApp(App)
+  const router = createAppRouter(createWebHistory())
   app.use(router)
 
   await router.isReady()
