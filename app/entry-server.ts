@@ -1,15 +1,19 @@
+/// <reference types="nitro/vite" />
 import { createSSRApp } from 'vue'
 import { renderToString } from 'vue/server-renderer'
-import { RouterView, createMemoryHistory, createRouter } from 'vue-router'
+import { createMemoryHistory } from 'vue-router'
 import { createHead, transformHtmlTemplate } from 'unhead/server'
 
-import { routes } from './routes.ts'
+import App from './app.vue'
+import { createAppRouter } from './router.ts'
 
 import clientAssets from './entry-client.ts?assets=client'
 
+const assetsModules = import.meta.glob('./pages/**/*.vue', { query: '?assets' })
+
 async function handler(request: Request): Promise<Response> {
-  const app = createSSRApp(RouterView)
-  const router = createRouter({ history: createMemoryHistory(), routes })
+  const app = createSSRApp(App)
+  const router = createAppRouter(createMemoryHistory())
   app.use(router)
 
   const url = new URL(request.url)
@@ -19,11 +23,12 @@ async function handler(request: Request): Promise<Response> {
   await router.isReady()
 
   const assets = clientAssets.merge(
+    (await import('./app.vue?assets')).default,
     ...(await Promise.all(
       router.currentRoute.value.matched
-        .map((to) => to.meta.assets)
-        .filter(Boolean)
-        .map((fn) => (fn as any)().then((m: any) => m.default)),
+        .map((to) => to.meta.assetsKey)
+        .filter((v): v is string => !!v)
+        .map((key) => assetsModules[key]?.().then((m: any) => m.default)),
     )),
   )
 
@@ -32,6 +37,7 @@ async function handler(request: Request): Promise<Response> {
   head.push({
     link: [
       ...assets.css.map((attrs: any) => ({ rel: 'stylesheet', ...attrs })),
+      // oxlint-disable-next-line no-map-spread
       ...assets.js.map((attrs: any) => ({ rel: 'modulepreload', ...attrs })),
     ],
     script: [{ type: 'module', src: clientAssets.entry }],

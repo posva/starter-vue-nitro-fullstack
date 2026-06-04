@@ -7,10 +7,15 @@
     "fmt": "oxfmt",
     "lint": "oxlint",
     "dev": "vite dev",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "pnpm run '/^typecheck:.+$/'",
+    "typescheck:app": "vue-tsc -p tsconfig.app.json",
+    "typecheck:server": "tsgo -p tsconfig.server.json"
   },
   "devDependencies": {
+    "@typescript/native-preview": "7.0.0-dev.20260604.1",
     "@vitejs/plugin-vue": "^6.0.5",
+    "@vue/tsconfig": "^0.9.1",
     "nitro": "latest",
     "oxfmt": "^0.53.0",
     "oxlint": "^1.68.0",
@@ -19,6 +24,7 @@
     "vite": "latest",
     "vite-plugin-devtools-json": "^1.0.0",
     "vue": "^3.5.31",
-    "vue-router": "^5.0.4"
+    "vue-router": "^5.0.4",
+    "vue-tsc": "^3.3.3"
   }
 }

@@ -1,3 +1,7 @@
+/*
+* Global types that should always be loaded. Imported by app.vue
+*/
+
 * {
   box-sizing: border-box;
 }

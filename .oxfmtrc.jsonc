@@ -9,7 +9,7 @@
     //
     "AGENTS.md",
     "CLAUDE.md",
-    "router.d.ts",
+    "routes.d.ts",
     "pnpm-lock.yaml",
   ],
 }
