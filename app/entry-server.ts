@@ -1,3 +1,4 @@
+/// <reference types="nitro/vite" />
 import { createSSRApp } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 import { createMemoryHistory } from 'vue-router'
@@ -36,6 +37,7 @@ async function handler(request: Request): Promise<Response> {
   head.push({
     link: [
       ...assets.css.map((attrs: any) => ({ rel: 'stylesheet', ...attrs })),
+      // oxlint-disable-next-line no-map-spread
       ...assets.js.map((attrs: any) => ({ rel: 'modulepreload', ...attrs })),
     ],
     script: [{ type: 'module', src: clientAssets.entry }],

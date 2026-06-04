@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "extends": ["nitro/tsconfig"],
+  "include": ["server/**/*.ts", "*.config.ts", "entry"],
+  "compilerOptions": {
+    "rootDir": ".",
+    // remove DOM, included in nitro/tsconfig
+    "lib": ["esnext"],
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true
+  }
+}
