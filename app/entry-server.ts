@@ -26,8 +26,8 @@ async function handler(request: Request): Promise<Response> {
     ...(await Promise.all(
       router.currentRoute.value.matched
         .map((to) => to.meta.assetsKey)
-        .filter(Boolean)
-        .map((key) => assetsModules[key!]().then((m: any) => m.default)),
+        .filter((v): v is string => !!v)
+        .map((key) => assetsModules[key]?.().then((m: any) => m.default)),
     )),
   )
 

@@ -10,6 +10,11 @@ import './styles.css'
         <RouterLink to="/" exact-active-class="active">Home</RouterLink>
       </li>
       <li>
+        <RouterLink to="/producs/254" active-class="active" v-slot="{ href }">{{
+          href
+        }}</RouterLink>
+      </li>
+      <li>
         <RouterLink to="/about" active-class="active">About</RouterLink>
       </li>
     </ul>
