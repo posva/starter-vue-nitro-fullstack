@@ -17,3 +17,5 @@ tsconfig.*.tsbuildinfo
 .clack-session.json
 .output
 .data
+.vercel
+.env*.local
