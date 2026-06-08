@@ -19,6 +19,7 @@
     "@electric-sql/pglite": "^0.5.1",
     "@neondatabase/serverless": "^1.1.0",
     "@typescript/native-preview": "7.0.0-dev.20260604.1",
+    "@vercel/speed-insights": "^2.0.0",
     "@vitejs/plugin-vue": "^6.0.5",
     "@vue/tsconfig": "^0.9.1",
     "drizzle-kit": "^0.31.10",
@@ -36,6 +37,5 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": []
-  },
-  "dependencies": {}
+  }
 }

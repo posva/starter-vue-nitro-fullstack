@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
+import { SpeedInsights } from '@vercel/speed-insights/vue'
 import './styles.css'
 </script>
 
 <template>
+  <SpeedInsights />
+
   <nav>
     <ul>
       <li>
