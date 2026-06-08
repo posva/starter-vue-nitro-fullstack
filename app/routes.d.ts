@@ -59,6 +59,20 @@ declare module 'vue-router/auto-routes' {
       { productId: string },
       | never
     >,
+    '/users/': RouteRecordInfo<
+      '/users/',
+      '/users',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/users/new': RouteRecordInfo<
+      '/users/new',
+      '/users/new',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
   }
 
   /**
@@ -103,6 +117,22 @@ declare module 'vue-router/auto-routes' {
         | never
       pathParamNames:
         | 'productId'
+    }
+    'app/pages/users/index.vue': {
+      routes:
+        | '/users/'
+      views:
+        | never
+      pathParamNames:
+        | never
+    }
+    'app/pages/users/new.vue': {
+      routes:
+        | '/users/new'
+      views:
+        | never
+      pathParamNames:
+        | never
     }
   }
 

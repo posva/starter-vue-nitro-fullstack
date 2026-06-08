@@ -16,3 +16,4 @@ tsconfig.*.tsbuildinfo
 .claude/plans
 .clack-session.json
 .output
+.data

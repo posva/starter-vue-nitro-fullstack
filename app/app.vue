@@ -15,6 +15,9 @@ import './styles.css'
         }}</RouterLink>
       </li>
       <li>
+        <RouterLink to="/users" active-class="active">Users</RouterLink>
+      </li>
+      <li>
         <RouterLink to="/about" active-class="active">About</RouterLink>
       </li>
     </ul>

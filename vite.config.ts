@@ -4,7 +4,7 @@ import VueRouter from 'vue-router/vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
 import { nitro } from 'nitro/vite'
 
-export default defineConfig((_env) => ({
+export default defineConfig((env) => ({
   plugins: [
     //
     VueRouter({
@@ -27,6 +27,9 @@ export default defineConfig((_env) => ({
     devtoolsJson(),
     nitro({
       serverDir: './server',
+      plugins:
+        // automatically applies db migrations during dev
+        env.mode === 'development' ? ['./server/database/dev-migration-plugin.ts'] : [],
     }),
   ],
   environments: {
