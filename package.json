@@ -12,7 +12,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "typecheck": "pnpm run '/^typecheck:.+$/'",
-    "typescheck:app": "vue-tsc -p tsconfig.app.json",
+    "typecheck:app": "vue-tsc -p tsconfig.app.json",
     "typecheck:server": "tsgo -p tsconfig.server.json"
   },
   "devDependencies": {
