@@ -15,6 +15,13 @@
       "when": 1780922879396,
       "tag": "0001_amazing_annihilus",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1780927800441,
+      "tag": "0002_charming_iron_monger",
+      "breakpoints": true
     }
   ]
 }
