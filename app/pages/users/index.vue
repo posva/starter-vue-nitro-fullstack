@@ -3,7 +3,7 @@ import { onMounted, ref, shallowRef } from 'vue'
 import { RouterLink } from 'vue-router'
 
 interface User {
-  id: number
+  id: string
   name: string
   email: string
   createdAt: string
