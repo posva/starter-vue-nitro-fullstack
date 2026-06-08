@@ -1,0 +1,94 @@
+# Database
+
+Drizzle ORM, **Postgres** dialect.
+
+- **Local dev:** PGlite (Postgres in WASM) at `.data/pg` — no Docker, zero setup.
+- **Production:** Neon over HTTP — runs on Vercel (Fluid/Edge), Cloudflare, any Node host.
+- Driver is chosen by env: `DATABASE_URL` unset → PGlite; set → Neon.
+
+> This is a **template**. The migrations in `server/database/migrations/` are demo-only
+> (they just prove dev + prod work). When you pick your database, you can delete them and
+> regenerate from scratch — there is no real data to preserve.
+
+## Touch-points (the files any DB swap edits)
+
+| File                                      | Role                                                                                                                                                         |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `server/database/schema.ts`               | Tables. Dialect-specific (`pgTable` vs `sqliteTable`, column types).                                                                                         |
+| `server/database/utils.ts`                | Shared column helpers (e.g. `createdAt`). **Dialect-specific** — pg `timestamp().defaultNow()` vs sqlite `integer({mode:'timestamp_ms'})`.                   |
+| `server/utils/drizzle.ts`                 | `useDrizzle()` — picks the driver per env. Holds the connection logic + `tables`/helper re-exports.                                                          |
+| `server/database/dev-migration-plugin.ts` | Dev-only auto-migrate. Imports the dialect's `.../migrator`. Registered only in dev via `nitro({ plugins })` in `vite.config.ts`, so it never ships to prod. |
+| `drizzle.config.ts`                       | `dialect` + `dbCredentials` for drizzle-kit.                                                                                                                 |
+| `.env.example`                            | The connection env var(s).                                                                                                                                   |
+| `package.json`                            | DB driver deps.                                                                                                                                              |
+
+## Workflow
+
+```bash
+pnpm db:generate   # edit schema.ts, then generate a migration
+pnpm db:migrate    # apply to DATABASE_URL (prod / CI deploy step)
+pnpm db:studio     # browse data
+```
+
+Locally, the dev server auto-applies migrations to PGlite on start (via the dev plugin), so `db:migrate` is only needed for a real Postgres / deploy.
+
+## Deploy (Vercel)
+
+1. Vercel → Marketplace → **Neon** integration → it injects `DATABASE_URL`.
+2. Build command: `pnpm db:migrate && pnpm build`.
+3. Same `postgres://` works on Cloudflare / custom Node — swap providers by changing the URL.
+
+## Switching database engine
+
+Drizzle abstracts the query API but **not the SQL dialect**:
+
+- **Swap provider, same dialect** (Neon → Supabase → RDS → self-hosted Postgres): change `DATABASE_URL` only. No code change.
+- **Swap engine/dialect** (Postgres ↔ SQLite/MySQL): edit the touch-point files above, drop `server/database/migrations/*`, and `pnpm db:generate` fresh.
+
+---
+
+## Migrating to Turso (libSQL / SQLite)
+
+> **Agent:** to switch this template from Postgres to Turso, make the edits below, then
+> `rm -rf server/database/migrations/* .data` and `pnpm db:generate`. No data migration —
+> the existing migrations are demo-only and can be dropped.
+
+**1. Deps**
+
+```bash
+pnpm remove @electric-sql/pglite @neondatabase/serverless
+pnpm add @libsql/client
+```
+
+**2. `server/database/schema.ts`** — `sqliteTable`, `integer('id').primaryKey({ autoIncrement: true })`, `text(...)`.
+
+**3. `server/database/utils.ts`** — sqlite `createdAt`:
+
+```ts
+import { integer } from 'drizzle-orm/sqlite-core'
+export const createdAt = integer('created_at', { mode: 'timestamp_ms' })
+  .notNull()
+  .$defaultFn(() => new Date())
+```
+
+**4. `server/utils/drizzle.ts`** — env-selected libSQL driver:
+
+- Local (no `TURSO_DATABASE_URL`): `drizzle-orm/libsql/node` with `file:.data/db.sqlite3` (mkdir the dir first).
+- Prod: `drizzle-orm/libsql/web` (HTTP — edge/Workers-safe) with `{ url, authToken }`.
+- Keep the `import.meta.env.DEV` gate so the local/file branch is tree-shaken from prod builds.
+- Return type → `LibSQLDatabase<typeof schema>`.
+
+**5. `server/database/dev-migration-plugin.ts`** — `import { migrate } from 'drizzle-orm/libsql/migrator'`.
+
+**6. `drizzle.config.ts`** — `dialect: 'turso'`, `dbCredentials: { url: process.env.TURSO_DATABASE_URL!, authToken: process.env.TURSO_AUTH_TOKEN }`.
+
+**7. `.env.example`** — `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` (unset locally → file DB).
+
+**8. Deploy** — Vercel → Marketplace → **Turso Cloud** integration injects `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`. Build command unchanged (`pnpm db:migrate && pnpm build`).
+
+### Turso vs the Postgres setup
+
+|                              | Pros                                                                                                                                                     | Cons                                                                                                                                                                                                          |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Turso / libSQL**           | Simplest engine; local dev is a plain SQLite file; embedded replicas give ~0ms reads (Node only); generous free tier; HTTP client works on edge/Workers. | Narrow ecosystem — effectively **Turso-only** (lock-in); SQLite dialect (no `pgvector`/rich types/extensions); edge **must** use the `web` (HTTP) client; embedded replicas are native-only (not serverless). |
+| **Postgres (Neon, current)** | Huge interchangeable provider market (easy to leave a vendor); first-party Vercel integration; scales to zero; rich SQL + extensions.                    | Cold starts on scale-to-zero (~300–500ms first query); local needs PGlite/Docker rather than a single file.                                                                                                   |
