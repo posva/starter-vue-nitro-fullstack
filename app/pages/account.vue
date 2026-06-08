@@ -1,0 +1,283 @@
+<script setup lang="ts">
+import { onMounted, ref, shallowRef } from 'vue'
+import { useRouter } from 'vue-router'
+import { authClient } from '../lib/auth-client'
+import { useAuth } from '../lib/use-auth'
+
+const router = useRouter()
+const { session, refresh } = useAuth()
+
+const SOCIAL = [
+  { id: 'github', label: 'GitHub' },
+  { id: 'google', label: 'Google' },
+  { id: 'vercel', label: 'Vercel' },
+] as const
+
+// Infer the row shapes straight from the client so they never drift from the API.
+type LinkedAccount = NonNullable<
+  Awaited<ReturnType<typeof authClient.listAccounts>>['data']
+>[number]
+type Passkey = NonNullable<
+  Awaited<ReturnType<typeof authClient.passkey.listUserPasskeys>>['data']
+>[number]
+
+const linked = shallowRef<LinkedAccount[]>([])
+const passkeys = shallowRef<Passkey[]>([])
+const ready = ref(false)
+const error = ref<string | null>(null)
+const busy = ref(false)
+
+async function load() {
+  error.value = null
+  await refresh()
+  if (!session.value) {
+    router.replace('/login')
+    return
+  }
+  const [accounts, keys] = await Promise.all([
+    authClient.listAccounts(),
+    authClient.passkey.listUserPasskeys(),
+  ])
+  linked.value = accounts.data ?? []
+  passkeys.value = keys.data ?? []
+  ready.value = true
+}
+
+onMounted(load)
+
+function isLinked(provider: string) {
+  return linked.value.some((a) => a.providerId === provider)
+}
+
+async function link(provider: string) {
+  error.value = null
+  // Redirects into the OAuth flow; auto-links to this account on return because
+  // the email matches (account linking is enabled server-side).
+  const { error: e } = await authClient.linkSocial({
+    provider: provider as 'github' | 'google' | 'vercel',
+    callbackURL: '/account',
+  })
+  if (e) error.value = e.message ?? `Could not link ${provider}`
+}
+
+async function unlink(providerId: string, accountId: string) {
+  error.value = null
+  busy.value = true
+  try {
+    const { error: e } = await authClient.unlinkAccount({ providerId, accountId })
+    if (e) throw new Error(e.message)
+    await load()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Could not unlink'
+  } finally {
+    busy.value = false
+  }
+}
+
+async function addPasskey() {
+  error.value = null
+  busy.value = true
+  try {
+    const res = await authClient.passkey.addPasskey({
+      name: `Passkey ${passkeys.value.length + 1}`,
+    })
+    if (res?.error) throw new Error(res.error.message)
+    await load()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Could not register passkey'
+  } finally {
+    busy.value = false
+  }
+}
+
+async function deletePasskey(id: string) {
+  error.value = null
+  busy.value = true
+  try {
+    const { error: e } = await authClient.passkey.deletePasskey({ id })
+    if (e) throw new Error(e.message)
+    await load()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Could not delete passkey'
+  } finally {
+    busy.value = false
+  }
+}
+
+async function logout() {
+  await authClient.signOut()
+  await refresh()
+  router.push('/login')
+}
+</script>
+
+<template>
+  <main>
+    <div v-if="!ready" class="card"><p>Loading…</p></div>
+
+    <template v-else-if="session">
+      <div class="header">
+        <h1>Account</h1>
+        <button class="button ghost" :disabled="busy" @click="logout">Sign out</button>
+      </div>
+
+      <div class="card">
+        <h2>Profile</h2>
+        <p><strong>Name:</strong> {{ session.user.name }}</p>
+        <p><strong>Email:</strong> {{ session.user.email }}</p>
+        <p>
+          <strong>Email verified:</strong>
+          {{ session.user.emailVerified ? 'yes' : 'no' }}
+        </p>
+      </div>
+
+      <div class="card">
+        <h2>Connected providers</h2>
+        <p class="hint">
+          Sign in with any provider sharing this email and it links here automatically.
+        </p>
+        <ul class="list">
+          <li v-for="p in SOCIAL" :key="p.id">
+            <span>{{ p.label }}</span>
+            <template v-if="isLinked(p.id)">
+              <span class="tag">linked</span>
+              <button
+                class="link"
+                :disabled="busy"
+                @click="unlink(p.id, linked.find((a) => a.providerId === p.id)!.accountId)"
+              >
+                Unlink
+              </button>
+            </template>
+            <button v-else class="link" :disabled="busy" @click="link(p.id)">Connect</button>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="header">
+          <h2>Passkeys</h2>
+          <button class="button" :disabled="busy" @click="addPasskey">Add passkey</button>
+        </div>
+        <p v-if="!passkeys.length" class="hint">No passkeys yet.</p>
+        <ul v-else class="list">
+          <li v-for="key in passkeys" :key="key.id">
+            <span>{{ key.name || 'Passkey' }}</span>
+            <span class="muted">{{
+              key.createdAt ? new Date(key.createdAt).toLocaleString() : ''
+            }}</span>
+            <button class="link" :disabled="busy" @click="deletePasskey(key.id)">Delete</button>
+          </li>
+        </ul>
+      </div>
+
+      <p v-if="error" class="error">{{ error }}</p>
+    </template>
+  </main>
+</template>
+
+<style scoped>
+main {
+  max-width: 640px;
+  margin: 2rem auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+h1 {
+  color: #646cff;
+  margin: 0;
+}
+
+h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+}
+
+.card {
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.card .header {
+  margin-bottom: 0.5rem;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.list li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.list li > span:first-child {
+  flex: 1;
+}
+
+.tag {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  background: #e3f7ec;
+  color: #2a7;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
+}
+
+.muted {
+  color: #999;
+  font-size: 0.85rem;
+}
+
+.hint {
+  color: #888;
+  font-size: 0.9rem;
+  margin: 0 0 0.5rem;
+}
+
+.button {
+  background: #646cff;
+  color: white;
+  padding: 0.45rem 0.9rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.button.ghost {
+  background: transparent;
+  color: #646cff;
+  border: 1px solid #646cff;
+}
+
+.button:disabled {
+  opacity: 0.6;
+}
+
+.link {
+  background: none;
+  border: none;
+  color: #646cff;
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0;
+}
+
+.error {
+  color: #d33;
+}
+</style>
