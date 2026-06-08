@@ -21,11 +21,23 @@ export default definePlugin(() => {
   // migrator does not apply there, so skip and let `pnpm db:migrate` handle it.
   if (process.env.DATABASE_URL) return
 
+  // Apply migrations as a detached, fully-isolated task: a failing migration must not
+  // take down the dev server. Drizzle runs the whole pending set in ONE transaction, so
+  // a single bad statement rolls them all back — on a fresh `.data/pg` that leaves an
+  // empty DB. We keep the server up and print a short, actionable warning instead of a
+  // raw WASM stack trace, so the dev can fix the migration (or reset `.data/pg`) and the
+  // plugin re-runs on the next reload.
   void (async () => {
     const db = await useDrizzle()
     const migrationsFolder = resolve(process.cwd(), 'server/database/migrations')
     await migrate(db as never, { migrationsFolder })
-  })().catch((error) => {
-    console.error('[db] failed to apply migrations', error)
+  })().catch((error: unknown) => {
+    const reason = error instanceof Error ? error.message : String(error)
+    console.warn(
+      `\n⚠️  [db] Migration failed — dev server is still running, but the local schema may be incomplete.\n` +
+        `    Reason: ${reason}\n` +
+        `    Fix the offending migration (DB requests will 500 until then), then save to reapply.\n` +
+        `    To start clean, stop the server, delete \`.data/pg\`, and restart.\n`,
+    )
   })
 })
