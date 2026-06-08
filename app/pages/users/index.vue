@@ -5,6 +5,7 @@ import { RouterLink } from 'vue-router'
 interface User {
   id: string
   name: string
+  lastName: string | null
   email: string
   createdAt: string
 }
@@ -47,6 +48,7 @@ onMounted(load)
           <tr>
             <th>ID</th>
             <th>Name</th>
+            <th>Last name</th>
             <th>Email</th>
             <th>Created</th>
           </tr>
@@ -55,6 +57,7 @@ onMounted(load)
           <tr v-for="user in users" :key="user.id">
             <td>{{ user.id }}</td>
             <td>{{ user.name }}</td>
+            <td>{{ user.lastName ?? '—' }}</td>
             <td>{{ user.email }}</td>
             <td>{{ new Date(user.createdAt).toLocaleString() }}</td>
           </tr>
