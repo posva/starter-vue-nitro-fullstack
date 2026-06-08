@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { RouterLink, RouterView } from 'vue-router'
 import { SpeedInsights } from '@vercel/speed-insights/vue'
+import { useAuth } from './lib/use-auth'
 import './styles.css'
+
+const { session, pending } = useAuth()
 </script>
 
 <template>
@@ -23,6 +26,18 @@ import './styles.css'
       <li>
         <RouterLink to="/about" active-class="active">About</RouterLink>
       </li>
+      <li class="spacer" />
+      <!-- Rendered client-side once the session resolves; SSR shows nothing to avoid a flash. -->
+      <template v-if="!pending">
+        <li v-if="session">
+          <RouterLink to="/account" active-class="active">{{
+            session.user.name || 'Account'
+          }}</RouterLink>
+        </li>
+        <li v-else>
+          <RouterLink to="/login" active-class="active">Sign in</RouterLink>
+        </li>
+      </template>
     </ul>
   </nav>
   <RouterView />
@@ -43,6 +58,10 @@ nav ul {
   gap: 2rem;
   max-width: 800px;
   margin: 0 auto;
+}
+
+nav .spacer {
+  margin-left: auto;
 }
 
 nav a {

@@ -52,11 +52,32 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/account': RouteRecordInfo<
+      '/account',
+      '/account',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
+    '/login': RouteRecordInfo<
+      '/login',
+      '/login',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/producs/[productId]': RouteRecordInfo<
       '/producs/[productId]',
       '/producs/:productId',
       { productId: string },
       { productId: string },
+      | never
+    >,
+    '/reset-password': RouteRecordInfo<
+      '/reset-password',
+      '/reset-password',
+      Record<never, never>,
+      Record<never, never>,
       | never
     >,
     '/users/': RouteRecordInfo<
@@ -110,6 +131,22 @@ declare module 'vue-router/auto-routes' {
       pathParamNames:
         | never
     }
+    'app/pages/account.vue': {
+      routes:
+        | '/account'
+      views:
+        | never
+      pathParamNames:
+        | never
+    }
+    'app/pages/login.vue': {
+      routes:
+        | '/login'
+      views:
+        | never
+      pathParamNames:
+        | never
+    }
     'app/pages/producs/[productId].vue': {
       routes:
         | '/producs/[productId]'
@@ -117,6 +154,14 @@ declare module 'vue-router/auto-routes' {
         | never
       pathParamNames:
         | 'productId'
+    }
+    'app/pages/reset-password.vue': {
+      routes:
+        | '/reset-password'
+      views:
+        | never
+      pathParamNames:
+        | never
     }
     'app/pages/users/index.vue': {
       routes:
