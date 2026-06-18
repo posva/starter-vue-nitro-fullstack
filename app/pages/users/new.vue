@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 const name = ref('')
+const lastName = ref('')
 const email = ref('')
 const pending = ref(false)
 const error = ref<string | null>(null)
@@ -16,7 +17,7 @@ async function submit() {
     const res = await fetch('/api/users', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ name: name.value, email: email.value }),
+      body: JSON.stringify({ name: name.value, lastName: lastName.value, email: email.value }),
     })
     if (!res.ok) {
       const body = await res.json().catch(() => null)
@@ -39,6 +40,11 @@ async function submit() {
       <label>
         <span>Name</span>
         <input v-model="name" type="text" required autocomplete="name" />
+      </label>
+
+      <label>
+        <span>Last name</span>
+        <input v-model="lastName" type="text" autocomplete="family-name" />
       </label>
 
       <label>
