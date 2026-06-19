@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
 interface Window {
-  /** SSR state serialized by `entry-server.ts`, rehydrated in `entry-client.ts`. */
-  __INITIAL_STATE__?: Record<string, any>
+  /** devalue payload serialized by `entry-server.ts`, revived in `entry-client.ts`. */
+  __INITIAL_STATE__?: unknown
 }

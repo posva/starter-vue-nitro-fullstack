@@ -6,6 +6,8 @@ import { createHead, transformHtmlTemplate } from 'unhead/server'
 
 import App from './app.vue'
 import { createAppRouter } from './router.ts'
+import { installPlugins } from './plugins'
+import { serializeState } from './serialization.ts'
 
 import clientAssets from './entry-client.ts?assets=client'
 
@@ -15,6 +17,9 @@ async function handler(request: Request): Promise<Response> {
   const app = createSSRApp(App)
   const router = createAppRouter(createMemoryHistory())
   app.use(router)
+
+  const initialState: Record<string, any> = {}
+  installPlugins({ app, router, isClient: false, initialState, request })
 
   const url = new URL(request.url)
   const href = url.href.slice(url.origin.length)
@@ -44,6 +49,12 @@ async function handler(request: Request): Promise<Response> {
   })
 
   const renderedApp = await renderToString(app)
+
+  // Serialize the SSR state so the client can rehydrate. Injected as a classic
+  // (non-module) script so it runs before the deferred client entry module.
+  head.push({
+    script: [{ innerHTML: `window.__INITIAL_STATE__=${serializeState(initialState)}` }],
+  })
 
   const html = await transformHtmlTemplate(head, htmlTemplate(renderedApp))
 
