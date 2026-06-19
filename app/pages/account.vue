@@ -27,6 +27,11 @@ const ready = ref(false)
 const error = ref<string | null>(null)
 const busy = ref(false)
 
+// Name typed in the "add passkey" field, and inline-rename state.
+const newPasskeyName = ref('')
+const editingId = ref<string | null>(null)
+const editName = ref('')
+
 async function load() {
   error.value = null
   await refresh()
@@ -78,13 +83,41 @@ async function addPasskey() {
   error.value = null
   busy.value = true
   try {
-    const res = await authClient.passkey.addPasskey({
-      name: `Passkey ${passkeys.value.length + 1}`,
-    })
+    // Use the typed name, falling back to a sensible default if left blank.
+    const name = newPasskeyName.value.trim() || `Passkey ${passkeys.value.length + 1}`
+    const res = await authClient.passkey.addPasskey({ name })
     if (res?.error) throw new Error(res.error.message)
+    newPasskeyName.value = ''
     await load()
   } catch (e) {
     error.value = e instanceof Error ? e.message : 'Could not register passkey'
+  } finally {
+    busy.value = false
+  }
+}
+
+function startRename(key: Passkey) {
+  editingId.value = key.id
+  editName.value = key.name ?? ''
+}
+
+function cancelRename() {
+  editingId.value = null
+  editName.value = ''
+}
+
+async function saveRename(id: string) {
+  const name = editName.value.trim()
+  if (!name) return
+  error.value = null
+  busy.value = true
+  try {
+    const { error: e } = await authClient.passkey.updatePasskey({ id, name })
+    if (e) throw new Error(e.message)
+    cancelRename()
+    await load()
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : 'Could not rename passkey'
   } finally {
     busy.value = false
   }
@@ -155,18 +188,44 @@ async function logout() {
       </div>
 
       <div class="card">
-        <div class="header">
-          <h2>Passkeys</h2>
-          <button class="button" :disabled="busy" @click="addPasskey">Add passkey</button>
-        </div>
+        <h2>Passkeys</h2>
+        <form class="add-passkey" @submit.prevent="addPasskey">
+          <input
+            v-model="newPasskeyName"
+            type="text"
+            placeholder="Passkey name (e.g. MacBook Touch ID)"
+            :disabled="busy"
+          />
+          <button class="button" type="submit" :disabled="busy">Add passkey</button>
+        </form>
+
         <p v-if="!passkeys.length" class="hint">No passkeys yet.</p>
         <ul v-else class="list">
           <li v-for="key in passkeys" :key="key.id">
-            <span>{{ key.name || 'Passkey' }}</span>
-            <span class="muted">{{
-              key.createdAt ? new Date(key.createdAt).toLocaleString() : ''
-            }}</span>
-            <button class="link" :disabled="busy" @click="deletePasskey(key.id)">Delete</button>
+            <!-- Inline rename -->
+            <template v-if="editingId === key.id">
+              <input
+                v-model="editName"
+                class="rename-input"
+                type="text"
+                :disabled="busy"
+                @keyup.enter="saveRename(key.id)"
+                @keyup.esc="cancelRename"
+              />
+              <button class="link" :disabled="busy || !editName.trim()" @click="saveRename(key.id)">
+                Save
+              </button>
+              <button class="link" :disabled="busy" @click="cancelRename">Cancel</button>
+            </template>
+            <!-- Default row -->
+            <template v-else>
+              <span>{{ key.name || 'Passkey' }}</span>
+              <span class="muted">{{
+                key.createdAt ? new Date(key.createdAt).toLocaleString() : ''
+              }}</span>
+              <button class="link" :disabled="busy" @click="startRename(key)">Rename</button>
+              <button class="link" :disabled="busy" @click="deletePasskey(key.id)">Delete</button>
+            </template>
           </li>
         </ul>
       </div>
@@ -177,6 +236,7 @@ async function logout() {
 </template>
 
 <style scoped>
+/* Layout only — colours/components come from the global theme (styles.css). */
 main {
   max-width: 640px;
   margin: 2rem auto;
@@ -190,7 +250,6 @@ main {
 }
 
 h1 {
-  color: #646cff;
   margin: 0;
 }
 
@@ -200,15 +259,33 @@ h2 {
 }
 
 .card {
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  padding: 1.25rem;
   margin-bottom: 1rem;
 }
 
 .card .header {
   margin-bottom: 0.5rem;
+}
+
+.hint {
+  margin: 0 0 0.5rem;
+}
+
+.add-passkey {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.add-passkey input {
+  flex: 1;
+}
+
+.add-passkey .button {
+  flex-shrink: 0;
+}
+
+.rename-input {
+  flex: 1;
 }
 
 .list {
@@ -222,62 +299,14 @@ h2 {
   align-items: center;
   gap: 0.75rem;
   padding: 0.5rem 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border);
+}
+
+.list li:last-child {
+  border-bottom: none;
 }
 
 .list li > span:first-child {
   flex: 1;
-}
-
-.tag {
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  background: #e3f7ec;
-  color: #2a7;
-  border-radius: 4px;
-  padding: 0.1rem 0.4rem;
-}
-
-.muted {
-  color: #999;
-  font-size: 0.85rem;
-}
-
-.hint {
-  color: #888;
-  font-size: 0.9rem;
-  margin: 0 0 0.5rem;
-}
-
-.button {
-  background: #646cff;
-  color: white;
-  padding: 0.45rem 0.9rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-.button.ghost {
-  background: transparent;
-  color: #646cff;
-  border: 1px solid #646cff;
-}
-
-.button:disabled {
-  opacity: 0.6;
-}
-
-.link {
-  background: none;
-  border: none;
-  color: #646cff;
-  cursor: pointer;
-  font-size: 0.85rem;
-  padding: 0;
-}
-
-.error {
-  color: #d33;
 }
 </style>

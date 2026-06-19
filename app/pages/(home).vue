@@ -29,7 +29,7 @@ function increment() {
 }
 
 .hero h1 {
-  color: rgb(100, 108, 255);
+  color: var(--primary);
 }
 
 .counter-card {
@@ -37,7 +37,7 @@ function increment() {
 }
 
 .counter-card h2 {
-  color: #646cff;
+  color: var(--primary);
   margin-bottom: 1rem;
 }
 

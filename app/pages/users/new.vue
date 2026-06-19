@@ -59,8 +59,9 @@ async function submit() {
 </template>
 
 <style scoped>
+/* Layout only — colours/inputs come from the global theme (styles.css). */
 h1 {
-  color: #646cff;
+  color: var(--primary);
 }
 
 form {
@@ -69,27 +70,9 @@ form {
   gap: 1rem;
 }
 
-label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
 label span {
-  color: #888;
   font-weight: 600;
-}
-
-input {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font: inherit;
-}
-
-input:focus {
-  outline: none;
-  border-color: #646cff;
+  color: var(--text);
 }
 
 .actions {
@@ -97,10 +80,5 @@ input:focus {
   align-items: center;
   justify-content: flex-end;
   gap: 1rem;
-}
-
-.error {
-  color: #d33;
-  margin: 0;
 }
 </style>

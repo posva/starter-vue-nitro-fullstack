@@ -111,7 +111,7 @@ async function forgotPassword() {
         <button
           v-for="p in SOCIAL"
           :key="p.id"
-          class="social-btn"
+          class="btn-neutral"
           type="button"
           :disabled="pending"
           :title="configured.includes(p.id) ? '' : 'Not configured yet — set its env vars'"
@@ -120,12 +120,12 @@ async function forgotPassword() {
           Continue with {{ p.label }}
           <span v-if="!configured.includes(p.id)" class="badge">setup</span>
         </button>
-        <button class="social-btn" type="button" :disabled="pending" @click="signInWithPasskey">
+        <button class="btn-neutral" type="button" :disabled="pending" @click="signInWithPasskey">
           Continue with a passkey
         </button>
       </div>
 
-      <div class="divider"><span>or</span></div>
+      <div class="divider">or</div>
 
       <form @submit.prevent="submitEmail">
         <label v-if="mode === 'sign-up'">
@@ -172,126 +172,26 @@ async function forgotPassword() {
 </template>
 
 <style scoped>
+/* Layout only — colours/components come from the global theme (styles.css). */
 main {
   max-width: 420px;
   margin: 2rem auto;
 }
 
-.card {
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  padding: 1.5rem;
-}
-
 h1 {
-  color: #646cff;
-  margin: 0 0 1rem;
+  margin-bottom: 1.25rem;
 }
 
-.social {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.social-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  padding: 0.6rem 1rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: #fafafa;
-  cursor: pointer;
-}
-
-.social-btn:hover:not(:disabled) {
-  background: #f0f0f0;
-}
-
-.badge {
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  background: #ffe8a3;
-  color: #8a6d00;
-  border-radius: 4px;
-  padding: 0.1rem 0.3rem;
-}
-
-.divider {
-  text-align: center;
-  border-bottom: 1px solid #eee;
-  line-height: 0.1em;
-  margin: 1.25rem 0;
-}
-
-.divider span {
-  background: white;
-  color: #999;
-  padding: 0 0.6rem;
-}
-
+.social,
 form {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-}
-
-label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.9rem;
-  color: #555;
-}
-
-input {
-  padding: 0.5rem;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 1rem;
-}
-
-.button {
-  background: #646cff;
-  color: white;
-  padding: 0.6rem 1rem;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 1rem;
-}
-
-.button:disabled {
-  opacity: 0.6;
-  cursor: default;
+  gap: 0.6rem;
 }
 
 .meta {
   display: flex;
   justify-content: space-between;
   margin-top: 1rem;
-}
-
-.link {
-  background: none;
-  border: none;
-  color: #646cff;
-  cursor: pointer;
-  padding: 0;
-  font-size: 0.85rem;
-}
-
-.error {
-  color: #d33;
-  margin: 0;
-}
-
-.notice {
-  color: #2a7;
-  margin: 0;
 }
 </style>

@@ -75,20 +75,13 @@ onMounted(load)
 }
 
 .header h1 {
-  color: #646cff;
+  color: var(--primary);
   margin: 0;
 }
 
+/* RouterLink styled as a primary button */
 .button {
-  background: #646cff;
-  color: white;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
   text-decoration: none;
-}
-
-.button:hover {
-  background: #535bf2;
 }
 
 table {
@@ -100,16 +93,12 @@ th,
 td {
   text-align: left;
   padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border);
 }
 
 th {
-  color: #888;
+  color: var(--text-dim);
   font-weight: 600;
-}
-
-.error {
-  color: #d33;
 }
 
 .refresh {
