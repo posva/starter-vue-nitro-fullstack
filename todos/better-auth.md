@@ -26,20 +26,31 @@ roughly ordered by importance.
       `openssl rand -base64 32`), `BETTER_AUTH_URL`, and the OAuth client
       id/secret pairs. Register the callback URL
       `<BETTER_AUTH_URL>/api/auth/callback/<provider>` in each provider console.
-- [ ] **Transactional email**. `sendResetPassword` and `sendVerificationEmail`
-      currently only `console.warn` the link. Wire a real provider (Resend,
-      Postmark, SES…). On serverless, send via `waitUntil` and don't `await` it
-      (timing-attack guidance from the docs).
-- [ ] **Turn on `requireEmailVerification: true`** once email sending works, so
-      unverified email/password accounts can't sign in.
+- [x] **Transactional email**. Implemented in `server/utils/email.ts`: a Resend
+      transport over `fetch` (no SDK), used when `RESEND_API_KEY` is set,
+      otherwise the link is logged to the console. `sendResetPassword` and
+      `sendVerificationEmail` go through it. **Prod action**: set `RESEND_API_KEY` + `EMAIL_FROM` (verified sending domain). Remaining nicety: on serverless,
+      send via `waitUntil` rather than `await` (timing-attack guidance) — we
+      currently await + swallow errors, which is fine but not optimal.
+- [x] **Email verification enforced in prod.** `requireEmailVerification` and
+      `accountLinking.requireLocalEmailVerified` are both `isProd`: enforced in
+      production (secure — local accounts are verified, so social linking is
+      safe), relaxed in dev (so sign-up + email-match linking work without a mail
+      provider). Verification mail is sent in every env (`sendOnSignUp`), so the
+      flow is testable locally via the logged link. **Requires** `RESEND_API_KEY`
+      in prod or users can't verify (a startup warning fires if it's missing).
 
 ## Hardening / best practices
 
 - [ ] **Rate limiting**. Better Auth has a built-in `rateLimit` option — enable
       and configure a store (in-memory is per-instance only; use the DB or a
       KV/Redis store on multi-instance/serverless).
-- [ ] **Trusted origins**. Set `trustedOrigins` for CSRF protection, especially
-      across Vercel preview domains.
+- [x] **Trusted origins**. `trustedOrigins` trusts any localhost origin in dev
+      (so any Vite port works) and only `baseURL` in prod. **Note**: Vercel
+      preview deployments have changing URLs — `VERCEL_URL` covers the current
+      one via `baseURL`, but if you hit auth across preview domains, extend the
+      dev branch of `trustedOrigins` (in `server/utils/auth.ts`) to also allow
+      `*.vercel.app` or your preview pattern.
 - [ ] **Cookie cache** (`session.cookieCache`) to cut DB reads per request.
 - [ ] **`databaseHooks`** if you need to mirror auth users into the demo `users`
       table or run side effects on user/session create.
@@ -47,6 +58,11 @@ roughly ordered by importance.
       the email verified) is acceptable for your threat model. Dropping it falls
       back to linking only on provider-verified emails — safer, but Vercel/GitHub
       email verification varies.
+- [x] **`accountLinking.requireLocalEmailVerified`** is `isProd` (prod: secure
+      default; dev: relaxed so linking to unverified local accounts works for
+      testing). The dev path is covered by the linking test in
+      `server/utils/auth.test.ts`. No action needed unless you want verification
+      enforced in dev too — then make it always `true` and configure email.
 - [ ] **SSR session**: the client fetches the session after mount
       (`app/lib/use-auth.ts`). For no-flash authenticated SSR, read the session
       on the server (`auth.api.getSession({ headers })`) in `entry-server` and

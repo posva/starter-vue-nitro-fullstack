@@ -4,6 +4,7 @@ import { PGlite } from '@electric-sql/pglite'
 import { drizzle } from 'drizzle-orm/pglite'
 import { migrate } from 'drizzle-orm/pglite/migrator'
 import { betterAuth } from 'better-auth'
+import { handleOAuthUserInfo } from 'better-auth/oauth2'
 import { eq } from 'drizzle-orm'
 import * as schema from '../database/schema'
 import { authOptions } from './auth'
@@ -56,14 +57,39 @@ test('valid credentials sign in, wrong password is rejected', async () => {
   ).rejects.toThrow()
 })
 
-test('account linking is enabled for the OAuth providers (email-match linking)', async () => {
-  // The product requirement: signing in through a different provider with a
-  // matching email links to the same account instead of duplicating it. Full
-  // OAuth-callback coverage needs provider mocking (see todos/), but we assert
-  // the config that drives it is actually on.
+test('signing in via a trusted provider links to the existing email account', async () => {
+  // The headline requirement: a logged-out social sign-in whose email already
+  // belongs to a local (email+password) account links into that account instead
+  // of erroring with `account_not_linked` or creating a duplicate user.
+  //
+  // We drive Better Auth's real OAuth-link path (`handleOAuthUserInfo`) with a
+  // faked provider profile — no live OAuth needed. The local account is
+  // unverified (no mail provider wired up), so this also guards the
+  // `accountLinking.requireLocalEmailVerified: false` setting: remove it and
+  // Better Auth refuses the link and this test fails.
+  const email = 'linkme@example.com'
+  await auth.api.signUpEmail({ body: { name: 'Linkme', email, password: 'supersecret123' } })
+
   const ctx = await auth.$context
-  expect(ctx.options.account?.accountLinking?.enabled).toBe(true)
-  expect(ctx.options.account?.accountLinking?.trustedProviders).toEqual(
-    expect.arrayContaining(['google', 'github', 'vercel']),
+  const result = await handleOAuthUserInfo(
+    { context: ctx, request: undefined } as never,
+    {
+      userInfo: { id: 'vercel-user-1', email, emailVerified: true, name: 'Linkme' },
+      account: { providerId: 'vercel', accountId: 'vercel-user-1' },
+      callbackURL: '/account',
+      disableSignUp: false,
+    } as never,
   )
+
+  expect(result.error).toBeNull()
+  expect(result.data?.user.email).toBe(email)
+
+  // Exactly one user, now with both a credential and a vercel account.
+  const users = await db.select().from(schema.user).where(eq(schema.user.email, email))
+  expect(users).toHaveLength(1)
+  const accounts = await db
+    .select()
+    .from(schema.account)
+    .where(eq(schema.account.userId, users[0]!.id))
+  expect(accounts.map((a) => a.providerId).sort()).toEqual(['credential', 'vercel'])
 })
