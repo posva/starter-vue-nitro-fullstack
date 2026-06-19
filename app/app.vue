@@ -2,6 +2,7 @@
 import { RouterLink, RouterView } from 'vue-router'
 import { SpeedInsights } from '@vercel/speed-insights/vue'
 import { useAuth } from './lib/use-auth'
+import { PiniaColadaDevtools } from '@pinia/colada-devtools'
 import './styles.css'
 
 const { session, pending } = useAuth()
@@ -9,6 +10,9 @@ const { session, pending } = useAuth()
 
 <template>
   <SpeedInsights />
+
+  <!-- Pinia Colada data-fetching devtools; auto-stripped from production builds. -->
+  <PiniaColadaDevtools />
 
   <nav>
     <ul>
@@ -22,6 +26,9 @@ const { session, pending } = useAuth()
       </li>
       <li>
         <RouterLink to="/users" active-class="active">Users</RouterLink>
+      </li>
+      <li>
+        <RouterLink to="/colada" active-class="active">Colada</RouterLink>
       </li>
       <li>
         <RouterLink to="/about" active-class="active">About</RouterLink>
