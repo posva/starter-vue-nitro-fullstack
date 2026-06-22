@@ -108,6 +108,7 @@ function clientVueRuntime(): Plugin {
     // runs, so match the resolved path (not the `vue` specifier) and swap it.
     resolveId(id) {
       if ((id === 'vue' || id === full) && this.environment?.name === 'client') return runtime
+      return undefined
     },
   }
 }
