@@ -58,7 +58,6 @@ export default defineConfig((env) => ({
     devtoolsJson(),
     nitro({
       serverDir: './server',
-      preset: 'vercel',
       alias: vueServerAliases,
       plugins:
         // automatically applies db migrations during dev
@@ -85,7 +84,9 @@ export default defineConfig((env) => ({
         rollupOptions: {
           // plugins: [adapter(analyzer())],
           treeshake: {
-            moduleSideEffects: () => false,
+            // Assume no side effects (smaller bundle) EXCEPT reflect-metadata, whose
+            // whole job is the global `Reflect.*Metadata` patch tsyringe needs at import.
+            moduleSideEffects: (id) => id.includes('reflect-metadata'),
           },
         },
       },
