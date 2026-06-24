@@ -1,17 +1,13 @@
 <script setup lang="ts">
-import { onMounted, ref, shallowRef } from 'vue'
+import { computed, onMounted, ref, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
 import { authClient } from '../lib/auth-client'
 import { useAuth } from '../lib/use-auth'
+import { SOCIAL, type SocialProvider } from '../lib/social-providers'
+import { errorMessage } from '../lib/errors'
 
 const router = useRouter()
 const { session, refresh } = useAuth()
-
-const SOCIAL = [
-  { id: 'github', label: 'GitHub' },
-  { id: 'google', label: 'Google' },
-  { id: 'vercel', label: 'Vercel' },
-] as const
 
 // Infer the row shapes straight from the client so they never drift from the API.
 type LinkedAccount = NonNullable<
@@ -32,6 +28,20 @@ const newPasskeyName = ref('')
 const editingId = ref<string | null>(null)
 const editName = ref('')
 
+// O(1) lookup of the linked account for a provider (drives both the "linked"
+// badge and the unlink button), so the template doesn't scan `linked` twice.
+const linkedByProvider = computed(() => new Map(linked.value.map((a) => [a.providerId, a])))
+
+// Refetch just the linked accounts + passkeys (no session round-trip).
+async function reloadLists() {
+  const [accounts, keys] = await Promise.all([
+    authClient.listAccounts(),
+    authClient.passkey.listUserPasskeys(),
+  ])
+  linked.value = accounts.data ?? []
+  passkeys.value = keys.data ?? []
+}
+
 async function load() {
   error.value = null
   await refresh()
@@ -39,62 +49,48 @@ async function load() {
     router.replace('/login')
     return
   }
-  const [accounts, keys] = await Promise.all([
-    authClient.listAccounts(),
-    authClient.passkey.listUserPasskeys(),
-  ])
-  linked.value = accounts.data ?? []
-  passkeys.value = keys.data ?? []
+  await reloadLists()
   ready.value = true
 }
 
 onMounted(load)
 
-function isLinked(provider: string) {
-  return linked.value.some((a) => a.providerId === provider)
-}
-
-async function link(provider: string) {
-  error.value = null
-  // Redirects into the OAuth flow; auto-links to this account on return because
-  // the email matches (account linking is enabled server-side).
-  const { error: e } = await authClient.linkSocial({
-    provider: provider as 'github' | 'google' | 'vercel',
-    callbackURL: '/account',
-  })
-  if (e) error.value = e.message ?? `Could not link ${provider}`
-}
-
-async function unlink(providerId: string, accountId: string) {
+// Wrap a mutating action: clear errors, toggle `busy`, refresh the lists, and
+// surface any failure. `fn` should throw (or return a `{ error }`) on failure.
+async function run(fn: () => Promise<unknown>, fallback: string) {
   error.value = null
   busy.value = true
   try {
-    const { error: e } = await authClient.unlinkAccount({ providerId, accountId })
-    if (e) throw new Error(e.message)
-    await load()
+    const res = (await fn()) as { error?: { message?: string | null } | null } | void
+    if (res?.error) throw new Error(res.error.message ?? undefined)
+    await reloadLists()
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Could not unlink'
+    error.value = errorMessage(e, fallback)
   } finally {
     busy.value = false
   }
 }
 
-async function addPasskey() {
+function link(provider: SocialProvider) {
   error.value = null
-  busy.value = true
-  try {
+  // Redirects into the OAuth flow; auto-links to this account on return because
+  // the email matches (account linking is enabled server-side). No reload needed.
+  return authClient.linkSocial({ provider, callbackURL: '/account' }).then(({ error: e }) => {
+    if (e) error.value = e.message ?? `Could not link ${provider}`
+  })
+}
+
+const unlink = (providerId: string, accountId: string) =>
+  run(() => authClient.unlinkAccount({ providerId, accountId }), 'Could not unlink')
+
+const addPasskey = () =>
+  run(async () => {
     // Use the typed name, falling back to a sensible default if left blank.
     const name = newPasskeyName.value.trim() || `Passkey ${passkeys.value.length + 1}`
     const res = await authClient.passkey.addPasskey({ name })
-    if (res?.error) throw new Error(res.error.message)
     newPasskeyName.value = ''
-    await load()
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Could not register passkey'
-  } finally {
-    busy.value = false
-  }
-}
+    return res
+  }, 'Could not register passkey')
 
 function startRename(key: Passkey) {
   editingId.value = key.id
@@ -106,36 +102,18 @@ function cancelRename() {
   editName.value = ''
 }
 
-async function saveRename(id: string) {
+function saveRename(id: string) {
   const name = editName.value.trim()
   if (!name) return
-  error.value = null
-  busy.value = true
-  try {
-    const { error: e } = await authClient.passkey.updatePasskey({ id, name })
-    if (e) throw new Error(e.message)
+  return run(async () => {
+    const res = await authClient.passkey.updatePasskey({ id, name })
     cancelRename()
-    await load()
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Could not rename passkey'
-  } finally {
-    busy.value = false
-  }
+    return res
+  }, 'Could not rename passkey')
 }
 
-async function deletePasskey(id: string) {
-  error.value = null
-  busy.value = true
-  try {
-    const { error: e } = await authClient.passkey.deletePasskey({ id })
-    if (e) throw new Error(e.message)
-    await load()
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Could not delete passkey'
-  } finally {
-    busy.value = false
-  }
-}
+const deletePasskey = (id: string) =>
+  run(() => authClient.passkey.deletePasskey({ id }), 'Could not delete passkey')
 
 async function logout() {
   await authClient.signOut()
@@ -172,12 +150,12 @@ async function logout() {
         <ul class="list">
           <li v-for="p in SOCIAL" :key="p.id">
             <span>{{ p.label }}</span>
-            <template v-if="isLinked(p.id)">
+            <template v-if="linkedByProvider.get(p.id)">
               <span class="tag">linked</span>
               <button
                 class="link"
                 :disabled="busy"
-                @click="unlink(p.id, linked.find((a) => a.providerId === p.id)!.accountId)"
+                @click="unlink(p.id, linkedByProvider.get(p.id)!.accountId)"
               >
                 Unlink
               </button>
