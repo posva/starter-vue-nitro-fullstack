@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { authClient } from '../lib/auth-client'
 import { errorMessage } from '../lib/errors'
@@ -7,15 +7,24 @@ import { errorMessage } from '../lib/errors'
 const route = useRoute()
 const router = useRouter()
 
-const token = ref('')
+const token = computed(() => route.params.token)
 const password = ref('')
 const pending = ref(false)
 const error = ref<string | null>(null)
 const done = ref(false)
 
+definePage({
+  params: {
+    query: {
+      token: {
+        default: '',
+      },
+    },
+  },
+})
+
 onMounted(() => {
   // Better Auth appends ?token=… to the redirect URL it emailed.
-  token.value = String(route.query.token ?? '')
   if (!token.value) error.value = 'Missing or invalid reset token.'
 })
 

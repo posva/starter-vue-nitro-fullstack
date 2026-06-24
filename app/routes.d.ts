@@ -76,8 +76,8 @@ declare module 'vue-router/auto-routes' {
     '/reset-password': RouteRecordInfo<
       '/reset-password',
       '/reset-password',
-      Record<never, never>,
-      Record<never, never>,
+      { token?: string },
+      { token: string },
       | never
     >,
     '/users/': RouteRecordInfo<

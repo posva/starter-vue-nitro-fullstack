@@ -1,6 +1,9 @@
 import { shallowRef } from 'vue'
 import { authClient, type Session } from './auth-client'
 
+// TODO: refactor to a cleaner version that works for both server and client
+// and allow deciding when we want to render client or server stuff
+
 // Module-level shared state so every component sees the same session without a
 // store library. Populated on the client only (see `refresh`), which keeps SSR
 // free of network calls and avoids hydration mismatches: the server always
@@ -19,7 +22,7 @@ export function useAuth() {
   // Kick off the first fetch lazily, once, on the client.
   if (!started && !import.meta.env.SSR) {
     started = true
-    void refresh()
+    refresh()
   }
 
   return { session, pending, refresh }

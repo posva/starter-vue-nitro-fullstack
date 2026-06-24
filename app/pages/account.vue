@@ -6,6 +6,8 @@ import { useAuth } from '../lib/use-auth'
 import { SOCIAL, type SocialProvider } from '../lib/social-providers'
 import { errorMessage } from '../lib/errors'
 
+// TODO: use pinia colada mutations to handle the auth state maybe?
+
 const router = useRouter()
 const { session, refresh } = useAuth()
 
@@ -71,7 +73,7 @@ async function run(fn: () => Promise<unknown>, fallback: string) {
   }
 }
 
-function link(provider: SocialProvider) {
+async function link(provider: SocialProvider) {
   error.value = null
   // Redirects into the OAuth flow; auto-links to this account on return because
   // the email matches (account linking is enabled server-side). No reload needed.
@@ -80,17 +82,19 @@ function link(provider: SocialProvider) {
   })
 }
 
-const unlink = (providerId: string, accountId: string) =>
-  run(() => authClient.unlinkAccount({ providerId, accountId }), 'Could not unlink')
+function unlink(providerId: string, accountId: string) {
+  return run(() => authClient.unlinkAccount({ providerId, accountId }), 'Could not unlink')
+}
 
-const addPasskey = () =>
-  run(async () => {
+function addPasskey() {
+  return run(async () => {
     // Use the typed name, falling back to a sensible default if left blank.
     const name = newPasskeyName.value.trim() || `Passkey ${passkeys.value.length + 1}`
     const res = await authClient.passkey.addPasskey({ name })
     newPasskeyName.value = ''
     return res
   }, 'Could not register passkey')
+}
 
 function startRename(key: Passkey) {
   editingId.value = key.id
@@ -112,8 +116,9 @@ function saveRename(id: string) {
   }, 'Could not rename passkey')
 }
 
-const deletePasskey = (id: string) =>
-  run(() => authClient.passkey.deletePasskey({ id }), 'Could not delete passkey')
+function deletePasskey(id: string) {
+  return run(() => authClient.passkey.deletePasskey({ id }), 'Could not delete passkey')
+}
 
 async function logout() {
   await authClient.signOut()
