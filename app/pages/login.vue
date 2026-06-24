@@ -9,6 +9,8 @@ import { errorMessage } from '../lib/errors'
 const router = useRouter()
 const { refresh } = useAuth()
 
+// TODO: split in two pages or components
+// TODO: reuse pinia colada with mutations from account
 type Mode = 'sign-in' | 'sign-up'
 const mode = ref<Mode>('sign-in')
 
@@ -21,6 +23,7 @@ const notice = ref<string | null>(null)
 const configured = shallowRef<string[]>([])
 onMounted(async () => {
   try {
+    // TODO: use pinia colada
     const res = await fetch('/api/auth-providers')
     configured.value = (await res.json()).providers ?? []
   } catch {
