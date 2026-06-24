@@ -137,7 +137,7 @@ export function authOptions(db: DrizzleDB): BetterAuthOptions {
         // of creating a duplicate. Listing them as trusted also links accounts
         // whose email a provider doesn't explicitly mark verified.
         enabled: true,
-        trustedProviders: ['google', 'github', 'vercel'],
+        trustedProviders: Object.keys(SOCIAL_PROVIDER_ENV) as SocialProviderId[],
         // Whether the *existing local* account must already be email-verified
         // before a social login may link into it (Better Auth's default is
         // `true`; an unmet requirement throws `account_not_linked`).
@@ -160,35 +160,32 @@ export function authOptions(db: DrizzleDB): BetterAuthOptions {
   }
 }
 
+// The social providers we support and the env vars holding each one's
+// credentials — the single source of truth for both `socialProviders()` and
+// `trustedProviders`. Add a provider here (and its `.env.example` entry) to
+// light it up; no other code change needed.
+// NOTE: Vercel reserves the `VERCEL_` env prefix, so its creds use `OAUTH_VERCEL_*`.
+const SOCIAL_PROVIDER_ENV = {
+  google: { id: 'GOOGLE_CLIENT_ID', secret: 'GOOGLE_CLIENT_SECRET' },
+  github: { id: 'GITHUB_CLIENT_ID', secret: 'GITHUB_CLIENT_SECRET' },
+  vercel: { id: 'OAUTH_VERCEL_CLIENT_ID', secret: 'OAUTH_VERCEL_CLIENT_SECRET' },
+} as const satisfies Record<string, { id: string; secret: string }>
+
+type SocialProviderId = keyof typeof SOCIAL_PROVIDER_ENV
+
 /**
  * Register a social provider only when both of its credentials are present, so
- * the server boots fine before any OAuth app is configured. Wire the env vars
- * (see `.env.example`) to light each one up — no code change needed.
+ * the server boots fine before any OAuth app is configured.
  */
 function socialProviders(): BetterAuthOptions['socialProviders'] {
   const providers: NonNullable<BetterAuthOptions['socialProviders']> = {}
-
-  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
-    providers.google = {
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  for (const [id, env] of Object.entries(SOCIAL_PROVIDER_ENV)) {
+    const clientId = process.env[env.id]
+    const clientSecret = process.env[env.secret]
+    if (clientId && clientSecret) {
+      providers[id as SocialProviderId] = { clientId, clientSecret }
     }
   }
-
-  if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
-    providers.github = {
-      clientId: process.env.GITHUB_CLIENT_ID,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET,
-    }
-  }
-
-  if (process.env.VERCEL_CLIENT_ID && process.env.VERCEL_CLIENT_SECRET) {
-    providers.vercel = {
-      clientId: process.env.VERCEL_CLIENT_ID,
-      clientSecret: process.env.VERCEL_CLIENT_SECRET,
-    }
-  }
-
   return providers
 }
 

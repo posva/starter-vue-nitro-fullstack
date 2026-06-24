@@ -3,7 +3,6 @@ import { dirname, join } from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
 import vue, { type Api } from '@vitejs/plugin-vue'
 import vueRouter from 'vue-router/vite'
-import { adapter, analyzer } from 'vite-bundle-analyzer'
 import devtoolsJson from 'vite-plugin-devtools-json'
 import { nitro } from 'nitro/vite'
 
@@ -20,6 +19,9 @@ const r = (pkg: string, file: string) => join(dirname(require.resolve(pkg + '/pa
 // server bundle). `nitro({ alias })` is the only knob the nitro build honors, but it
 // applies the map *globally* — `clientVueRuntime()` below walks back the one harmful
 // entry (`vue` → full build) for the client so the browser keeps the runtime-only build.
+// TODO: remove `vueServerAliases` (+ the `r` helper and `clientVueRuntime()` below) once
+// Vue ships ESM-only packages — natural resolution then gives the right builds with no
+// aliasing. See https://github.com/vuejs/core/pull/15000 (verified working against it).
 const vueServerAliases = {
   vue: r('vue', 'dist/vue.esm-bundler.js'),
   'vue/server-renderer': r('vue', 'server-renderer/index.mjs'),
@@ -82,7 +84,9 @@ export default defineConfig((env) => ({
     nitro: {
       build: {
         rollupOptions: {
-          // plugins: [adapter(analyzer())],
+          // To inspect the server bundle, add:
+          //   import { adapter, analyzer } from 'vite-bundle-analyzer'
+          //   plugins: [adapter(analyzer())],
           treeshake: {
             // Assume no side effects (smaller bundle) EXCEPT reflect-metadata, whose
             // whole job is the global `Reflect.*Metadata` patch tsyringe needs at import.
@@ -98,6 +102,8 @@ export default defineConfig((env) => ({
 // full `vue.esm-bundler.js` (with the runtime template compiler) leaks into the
 // client build too. Redirect `vue` back to the runtime-only build for the client
 // environment only, before the alias plugin runs (~36KB gzip off the browser bundle).
+// TODO: remove together with `vueServerAliases` once Vue is ESM-only.
+// See https://github.com/vuejs/core/pull/15000
 function clientVueRuntime(): Plugin {
   const full = r('vue', 'dist/vue.esm-bundler.js')
   const runtime = r('vue', 'dist/vue.runtime.esm-bundler.js')

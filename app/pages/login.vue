@@ -3,6 +3,8 @@ import { onMounted, reactive, ref, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
 import { authClient } from '../lib/auth-client'
 import { useAuth } from '../lib/use-auth'
+import { SOCIAL, type SocialProvider } from '../lib/social-providers'
+import { errorMessage } from '../lib/errors'
 
 const router = useRouter()
 const { refresh } = useAuth()
@@ -14,12 +16,6 @@ const form = reactive({ name: '', email: '', password: '' })
 const pending = ref(false)
 const error = ref<string | null>(null)
 const notice = ref<string | null>(null)
-
-const SOCIAL = [
-  { id: 'github', label: 'GitHub' },
-  { id: 'google', label: 'Google' },
-  { id: 'vercel', label: 'Vercel' },
-] as const
 
 // Which providers actually have credentials configured on the server.
 const configured = shallowRef<string[]>([])
@@ -57,17 +53,17 @@ async function submitEmail() {
     }
     await done()
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Something went wrong'
+    error.value = errorMessage(e)
   } finally {
     pending.value = false
   }
 }
 
-async function signInWithProvider(provider: string) {
+async function signInWithProvider(provider: SocialProvider) {
   error.value = notice.value = null
   // Full-page redirect into the OAuth flow; comes back to /account.
   const { error: e } = await authClient.signIn.social({
-    provider: provider as 'github' | 'google' | 'vercel',
+    provider,
     callbackURL: '/account',
   })
   if (e) error.value = e.message ?? `Could not sign in with ${provider}`
@@ -81,7 +77,7 @@ async function signInWithPasskey() {
     if (res?.error) throw new Error(res.error.message)
     await done()
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Passkey sign-in failed'
+    error.value = errorMessage(e, 'Passkey sign-in failed')
   } finally {
     pending.value = false
   }

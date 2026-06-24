@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { authClient } from '../lib/auth-client'
+import { errorMessage } from '../lib/errors'
 
 const route = useRoute()
 const router = useRouter()
@@ -30,7 +31,7 @@ async function submit() {
     done.value = true
     setTimeout(() => router.push('/login'), 1500)
   } catch (e) {
-    error.value = e instanceof Error ? e.message : 'Could not reset password'
+    error.value = errorMessage(e, 'Could not reset password')
   } finally {
     pending.value = false
   }
