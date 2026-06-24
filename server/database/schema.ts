@@ -20,8 +20,7 @@ export type NewUser = typeof users.$inferInsert
 // These match the schema Better Auth's drizzle adapter expects: the *property
 // keys* (id, emailVerified, userId, …) are the field names Better Auth reads,
 // the SQL column names are snake_cased for Postgres convention. IDs are text
-// because Better Auth generates them itself. Run `pnpm db:generate` after any
-// change here, then `pnpm db:migrate` (prod) — dev PGlite migrates on startup.
+// because Better Auth generates them itself.
 // ---------------------------------------------------------------------------
 
 export const user = pgTable('user', {
