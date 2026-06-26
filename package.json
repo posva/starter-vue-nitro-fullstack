@@ -2,6 +2,9 @@
   "name": "starter-vue-ssr",
   "private": true,
   "type": "module",
+  "imports": {
+    "#shared/*": "./shared/*.ts"
+  },
   "scripts": {
     "build": "vite build",
     "fmt": "oxfmt",

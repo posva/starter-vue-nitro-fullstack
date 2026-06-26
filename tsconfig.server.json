@@ -1,11 +1,13 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": ["nitro/tsconfig"],
-  "include": ["server/**/*.ts", "*.config.ts", "entry"],
+  "include": ["server/**/*.ts", "*.config.ts", "shared"],
   "compilerOptions": {
     "rootDir": ".",
     // remove DOM, included in nitro/tsconfig
     "lib": ["esnext"],
+
+    // `#shared/*` resolves via the package.json `imports` field — no path mapping needed.
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true
   }
