@@ -9,7 +9,9 @@
     //
     "AGENTS.md",
     "CLAUDE.md",
+    // generated
     "routes.d.ts",
+    "server/database/migrations",
     "pnpm-lock.yaml",
   ],
 }
