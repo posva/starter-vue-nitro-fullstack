@@ -30,8 +30,8 @@ export interface PluginContext {
    * it and it is serialized into the HTML; on the client, it is rehydrated
    * from `window.__INITIAL_STATE__`.
    */
-  getInitialState(env: true): InitialStateServer
-  getInitialState(env: false): InitialStateClient
+  getInitialState(isSSR: true): InitialStateServer
+  getInitialState(isSSR: false): InitialStateClient
 
   /**
    * The incoming request, only available during SSR.
