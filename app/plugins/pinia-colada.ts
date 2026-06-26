@@ -38,8 +38,8 @@ export default defineModule({
       })
     } else {
       const initialState = getInitialState(import.meta.env.SSR)
-      const state = initialState.get('pinia_colada')
-      // const evalState = initialState.get('pinia_colada_eval')
+      const state = initialState.pinia_colada
+      // const evalState = initialState.pinia_colada_eval
       if (state) {
         hydrateQueryCache(
           queryCache,

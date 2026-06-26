@@ -12,7 +12,9 @@ export default defineModule(({ app, getInitialState }) => {
   if (import.meta.env.SSR) {
     const state = getInitialState(import.meta.env.SSR)
     state.add('pinia', () => {
+      // toRaw is needed to get access to some internal properties
       const data = stringify(toRaw(pinia.state.value), {
+        // skip special values in pinia stores
         skipHydrate: (data: unknown) => !shouldHydrate(data),
       })
 
@@ -20,9 +22,12 @@ export default defineModule(({ app, getInitialState }) => {
     })
   } else {
     const state = getInitialState(import.meta.env.SSR)
-    pinia.state.value = parse(state.get('pinia') || '{}', {
-      skipHydrate: () => undefined,
-    })
+    if (state.pinia) {
+      pinia.state.value = parse(state['pinia'], {
+        // skipped properties can be ignored
+        skipHydrate: () => undefined,
+      })
+    }
   }
 
   return {

@@ -1,3 +1,6 @@
+/**
+ * Builder for the initial state of the application during SSR on the server.
+ */
 export class InitialStateServer {
   #builders: Record<string, () => string> = {}
 
@@ -26,22 +29,16 @@ export class InitialStateServer {
     return JSON.stringify(state)
   }
 
-  [Symbol.dispose]() {
+  /**
+   * To release variables and memory after the request is done, this method clears the builders.
+   * Could be [Symbol.dispose] but support is still low
+   */
+  clear() {
     this.#builders = {}
   }
 }
 
-// TODO: export type InitialStateClient = Record<string, string | undefined>
-
-export class InitialStateClient {
-  #values: Record<string, string | undefined> = {}
-
-  constructor(state: Record<string, string | undefined>) {
-    this.#values = state
-  }
-  get(key: string): string | undefined {
-    return this.#values[key]
-  }
-}
-
-export const InitialState = import.meta.env.SSR ? InitialStateServer : InitialStateClient
+/**
+ * Convenience type for the initial state on the client. It is just a record of string keys
+ */
+export type InitialStateClient = Record<string, string | undefined>

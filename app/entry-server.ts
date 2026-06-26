@@ -24,8 +24,8 @@ async function handler(request: Request): Promise<Response> {
   installPlugins({
     app,
     router,
-    isClient: false,
-    getInitialState: (_env: boolean) => initialState as any,
+    // cannot type because of the overloads
+    getInitialState: () => initialState as any,
     request,
   })
 

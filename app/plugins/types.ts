@@ -17,18 +17,12 @@ export interface PluginContext {
    */
   router: Router
 
-  // FIXME: replace usage with import.emate.env.SSR because it's tree shakable
-  /**
-   * `true` in the browser, `false` during SSR.
-   *
-   * @deprecated
-   */
-  isClient: boolean
-
   /**
    * State shared between server and client. On the server, plugins write into
    * it and it is serialized into the HTML; on the client, it is rehydrated
    * from `window.__INITIAL_STATE__`.
+   *
+   * @param isSSR - MUST be import.meta.env.SSR
    */
   getInitialState(isSSR: true): InitialStateServer
   getInitialState(isSSR: false): InitialStateClient
