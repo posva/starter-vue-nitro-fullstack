@@ -1,19 +1,28 @@
-import { createPinia } from 'pinia'
-import { PiniaStateRef } from '../serialization.ts'
+import { createPinia, shouldHydrate } from 'pinia'
 import { defineModule } from './types.ts'
+import { parse, stringify } from 'devalue'
+import { toRaw } from 'vue'
 
 // Setup Pinia
 // https://pinia.vuejs.org/
-export default defineModule(({ app, isClient, initialState }) => {
+export default defineModule(({ app, getInitialState }) => {
   const pinia = createPinia()
   app.use(pinia)
 
-  if (isClient) {
-    // Rehydrate the state serialized during SSR.
-    pinia.state.value = initialState.pinia || {}
+  if (import.meta.env.SSR) {
+    const state = getInitialState(import.meta.env.SSR)
+    state.add('pinia', () => {
+      const data = stringify(toRaw(pinia.state.value), {
+        skipHydrate: (data: unknown) => !shouldHydrate(data),
+      })
+
+      return data
+    })
   } else {
-    // Hold a reference; devalue captures the populated state after render.
-    initialState.pinia = new PiniaStateRef(pinia.state.value)
+    const state = getInitialState(import.meta.env.SSR)
+    pinia.state.value = parse(state.get('pinia') || '{}', {
+      skipHydrate: () => undefined,
+    })
   }
 
   return {
