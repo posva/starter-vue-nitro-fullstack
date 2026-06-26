@@ -20,20 +20,17 @@ type AnyModule = DefineModuleOptions<unknown, readonly unknown[]>
  */
 export function installPlugins(ctx: PluginContext): void {
   const modules = import.meta.glob<{ default?: AnyModule }>(
+    // TODO: could we handle client only and server only plugins with .server.ts?
     ['./*.ts', '!./index.ts', '!./types.ts'],
     { eager: true },
   )
 
-  const roots = Object.values(modules)
-    .map((mod) => mod.default)
-    .filter((mod): mod is AnyModule => !!mod)
-
   // Memoized additions per module; doubles as the "already installed" set.
-  const installed = new Map<AnyModule, unknown>()
+  const installed = new WeakMap<AnyModule, unknown>()
   // Modules currently on the DFS stack, to detect circular dependencies.
-  const visiting = new Set<AnyModule>()
+  const visiting = new WeakSet<AnyModule>()
 
-  function install(mod: AnyModule): unknown {
+  function install(mod: AnyModule, file: string): unknown {
     if (installed.has(mod)) return installed.get(mod)
     if (visiting.has(mod)) {
       throw new Error('Circular plugin dependency detected in app/plugins')
@@ -44,7 +41,7 @@ export function installPlugins(ctx: PluginContext): void {
     // its (transitive) dependencies, installing each dependency first.
     const moduleCtx = { ...ctx }
     for (const dep of mod.dependsOn ?? []) {
-      Object.assign(moduleCtx, install(dep as AnyModule))
+      Object.assign(moduleCtx, install(dep as AnyModule, 'dep of ' + file))
     }
 
     const additions = mod.handler(moduleCtx as PluginContext)
@@ -53,10 +50,10 @@ export function installPlugins(ctx: PluginContext): void {
     return additions
   }
 
-  for (const file in roots) {
-    const mod = roots[file]
+  for (const file in modules) {
+    const mod = modules[file]?.default
     if (mod) {
-      install(mod)
+      install(mod, file)
     } else if (process.env.NODE_ENV === 'development') {
       console.warn(`Plugin at "${file}" has no default export and was skipped.`)
     }

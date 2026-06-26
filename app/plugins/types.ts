@@ -1,11 +1,6 @@
 import type { App } from 'vue'
 import type { Router } from 'vue-router'
-
-/**
- * The shape of the state shared between server and client. Plugins can write into
- *  it during SSR and read from it during hydration. It is serialized into the HTML
- */
-export type InitialState = Record<string, any>
+import type { InitialStateClient, InitialStateServer } from '~/initial-state'
 
 /**
  * Context handed to every plugin's `install` function. Built once per app
@@ -16,20 +11,28 @@ export interface PluginContext {
    * The Vue app instance.
    */
   app: App
+
   /**
    * The router instance, already installed on `app`.
    */
   router: Router
+
+  // FIXME: replace usage with import.emate.env.SSR because it's tree shakable
   /**
    * `true` in the browser, `false` during SSR.
+   *
+   * @deprecated
    */
   isClient: boolean
+
   /**
    * State shared between server and client. On the server, plugins write into
    * it and it is serialized into the HTML; on the client, it is rehydrated
    * from `window.__INITIAL_STATE__`.
    */
-  initialState: InitialState
+  getInitialState(env: true): InitialStateServer
+  getInitialState(env: false): InitialStateClient
+
   /**
    * The incoming request, only available during SSR.
    */
@@ -58,6 +61,8 @@ export interface DefineModuleOptions<Additions, DependsOn extends readonly unkno
    * (transitive) dependencies.
    */
   handler: (ctx: Prettify<PluginContext & MergeReturns<DependsOn>>) => Additions
+
+  // TODO: setup a dispose? that is called after the request is done, for cleanup of any resources that need to be released
 }
 
 /**
@@ -119,22 +124,7 @@ const b = defineModule({
 
 const c = defineModule({
   dependsOn: [b],
-  handler(ctx) {
+  handler() {
     return { c: 'hey' }
-  },
-})
-
-const a = defineModule({
-  dependsOn: [
-    //
-    // b,
-    c,
-  ],
-  handler(ctx) {
-    ctx.b
-    ctx.c
-    return {
-      hey: 'hello',
-    }
   },
 })

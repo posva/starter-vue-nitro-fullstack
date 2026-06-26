@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { useQuery } from '@pinia/colada'
+import { fetch as nitroFetch } from 'nitro'
+import { onServerPrefetch } from 'vue'
 
 // FIXME: the fetch should come from nitro on server but not in client
 
@@ -12,14 +14,16 @@ interface User {
 
 // `useQuery` handles caching, deduplication, and SSR hydration for us.
 // https://pinia-colada.esm.dev/guide/queries.html
-const { state, asyncStatus, refetch } = useQuery({
+const { state, asyncStatus, refetch, refresh } = useQuery({
   key: ['users'],
   query: async (): Promise<User[]> => {
-    const res = await fetch(`/api/users`)
+    const res = await (import.meta.env.SSR ? nitroFetch : fetch)(`/api/users`)
     if (!res.ok) throw new Error(`Request failed with ${res.status}`)
     return res.json()
   },
 })
+
+onServerPrefetch(() => refresh())
 </script>
 
 <template>

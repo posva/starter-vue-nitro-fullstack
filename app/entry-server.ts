@@ -1,7 +1,7 @@
 /// <reference types="nitro/vite" />
 import { createSSRApp } from 'vue'
 import { renderToString } from 'vue/server-renderer'
-import { createMemoryHistory } from 'vue-router'
+import { createMemoryHistory, RouterLink, RouterView } from 'vue-router'
 import { createHead, transformHtmlTemplate } from 'unhead/server'
 
 import App from './app.vue'
@@ -10,16 +10,25 @@ import { installPlugins } from './plugins'
 import { serializeState } from './serialization.ts'
 
 import clientAssets from './entry-client.ts?assets=client'
+import { InitialStateServer } from './initial-state.ts'
 
 const assetsModules = import.meta.glob('./pages/**/*.vue', { query: '?assets' })
 
 async function handler(request: Request): Promise<Response> {
   const app = createSSRApp(App)
   const router = createAppRouter(createMemoryHistory())
+  app.component('RouterLink', RouterLink)
+  app.component('RouterView', RouterView)
   app.use(router)
 
-  const initialState: Record<string, any> = {}
-  installPlugins({ app, router, isClient: false, initialState, request })
+  const initialState = new InitialStateServer()
+  installPlugins({
+    app,
+    router,
+    isClient: false,
+    getInitialState: (_env: boolean) => initialState as any,
+    request,
+  })
 
   const url = new URL(request.url)
   const href = url.href.slice(url.origin.length)
@@ -53,7 +62,8 @@ async function handler(request: Request): Promise<Response> {
   // Serialize the SSR state so the client can rehydrate. Injected as a classic
   // (non-module) script so it runs before the deferred client entry module.
   head.push({
-    script: [{ innerHTML: `window.__INITIAL_STATE__=${serializeState(initialState)}` }],
+    script: [{ innerHTML: `window.__INITIAL_STATE__=${initialState}` }],
+    // script: [{ innerHTML: `window.__INITIAL_STATE__=${serializeState(initialState)}` }],
   })
 
   const html = await transformHtmlTemplate(head, htmlTemplate(renderedApp))

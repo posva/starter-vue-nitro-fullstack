@@ -2,5 +2,5 @@
 
 interface Window {
   /** devalue payload serialized by `entry-server.ts`, revived in `entry-client.ts`. */
-  __INITIAL_STATE__?: unknown
+  __INITIAL_STATE__?: Record<string, string | undefined>
 }

@@ -1,5 +1,5 @@
-import { stringify, unflatten } from 'devalue'
-import { isQueryCache, serializeQueryCache } from '@pinia/colada'
+import { stringify, uneval, unflatten } from 'devalue'
+import { isQueryCache, isMutationCache, serializeQueryCache } from '@pinia/colada'
 
 /**
  * Pinia store ids owned by Pinia Colada. Their state is serialized through the
