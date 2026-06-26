@@ -1,8 +1,8 @@
 import { defineConfig } from 'vitest/config'
+import { resolve } from 'node:path'
 
-// Split into projects (https://vitest.dev/guide/projects) so frontend tests can
-// be added later without disturbing the server suite. Today only `server` runs;
-// the commented `app` project is the slot for future Vue component tests.
+// Split into projects (https://vitest.dev/guide/projects) so frontend and
+// server tests can run independently.
 export default defineConfig({
   test: {
     projects: [
@@ -14,13 +14,26 @@ export default defineConfig({
           include: ['server/**/*.test.ts'],
         },
       },
-      // Frontend tests (uncomment + `pnpm add -D jsdom @vue/test-utils` when needed):
+      {
+        resolve: {
+          alias: {
+            '~': resolve('./app'),
+          },
+        },
+        test: {
+          name: 'app',
+          // Plain Node — module system tests have no DOM dependency.
+          environment: 'node',
+          include: ['app/**/*.test.ts'],
+        },
+      },
+      // Vue component tests (uncomment + `pnpm add -D jsdom @vue/test-utils` when needed):
       // {
       //   plugins: [vue()], // import vue from '@vitejs/plugin-vue'
       //   test: {
-      //     name: 'app',
+      //     name: 'app-components',
       //     environment: 'jsdom',
-      //     include: ['app/**/*.test.ts'],
+      //     include: ['app/**/*.component.test.ts'],
       //   },
       // },
     ],

@@ -3,10 +3,10 @@ import type { Router } from 'vue-router'
 import type { InitialStateClient, InitialStateServer } from '~/initial-state'
 
 /**
- * Context handed to every plugin's `install` function. Built once per app
- * instance in both `entry-client.ts` and `entry-server.ts`.
+ * Context handed to every module's `handler` and `onRendered` functions. Built
+ * once per app instance in both `entry-client.ts` and `entry-server.ts`.
  */
-export interface PluginContext {
+export interface ModuleContext {
   /**
    * The Vue app instance.
    */
@@ -18,7 +18,7 @@ export interface PluginContext {
   router: Router
 
   /**
-   * State shared between server and client. On the server, plugins write into
+   * State shared between server and client. On the server, modules write into
    * it and it is serialized into the HTML; on the client, it is rehydrated
    * from `window.__INITIAL_STATE__`.
    *
@@ -31,6 +31,31 @@ export interface PluginContext {
    * The incoming request, only available during SSR.
    */
   request?: Request
+
+  /**
+   * Registers a callback fired once the app has finished server rendering
+   * (after `renderToString`). Use it to release per-request resources created
+   * in a handler. Callbacks run in reverse registration order, which — because
+   * handlers run in topological order — means dependents tear down before
+   * their dependencies.
+   *
+   * SERVER ONLY: only `entry-server.ts` provides it, so it is `undefined` on
+   * the client. Always call it behind an `import.meta.env.SSR` guard so the
+   * registration — and everything the callback closes over — is tree-shaken
+   * out of the client bundle:
+   *
+   * ```ts
+   * defineModule((ctx) => {
+   *   if (import.meta.env.SSR) {
+   *     ctx.onRendered?.(() => {
+   *       // release server-only resources
+   *     })
+   *   }
+   *   return {}
+   * })
+   * ```
+   */
+  onRendered?(fn: () => void): void
 }
 
 /**
@@ -51,12 +76,10 @@ export interface DefineModuleOptions<Additions, DependsOn extends readonly unkno
   /**
    * Sets up the module and returns the additions exposed to dependent modules.
    *
-   * @param ctx - The {@link PluginContext} augmented with the additions of all
+   * @param ctx - The {@link ModuleContext} augmented with the additions of all
    * (transitive) dependencies.
    */
-  handler: (ctx: Prettify<PluginContext & MergeReturns<DependsOn>>) => Additions
-
-  // TODO: setup a dispose? that is called after the request is done, for cleanup of any resources that need to be released
+  handler: (ctx: Prettify<ModuleContext & MergeReturns<DependsOn>>) => Additions
 }
 
 /**
@@ -82,18 +105,18 @@ type MergeReturns<Modules extends readonly unknown[]> = Modules extends []
     : {}
 
 /**
- * Defines a plugin module from a bare handler.
+ * Defines a module from a bare handler.
  *
- * @param handler - Receives the {@link PluginContext} and returns its additions.
+ * @param handler - Receives the {@link ModuleContext} and returns its additions.
  */
 export function defineModule<Additions>(
   handler: DefineModuleOptions<Additions>['handler'],
 ): DefineModuleOptions<Additions>
 /**
- * Defines a plugin module with explicit dependencies.
+ * Defines a module with explicit dependencies.
  *
- * @param options - The {@link DefineModuleOptions} describing dependencies and
- * the handler.
+ * @param options - The {@link DefineModuleOptions} describing the dependencies
+ * and the handler.
  */
 export function defineModule<Additions, const DependsOn extends readonly unknown[]>(
   options: DefineModuleOptions<Additions, DependsOn>,
@@ -105,20 +128,3 @@ export function defineModule<const DependsOn extends readonly unknown[], Additio
 ): DefineModuleOptions<Additions, DependsOn> {
   return typeof optionsOrHandler === 'function' ? { handler: optionsOrHandler } : optionsOrHandler
 }
-
-const b = defineModule({
-  handler(ctx) {
-    ctx.request
-
-    return {
-      b: 'hey b',
-    }
-  },
-})
-
-const c = defineModule({
-  dependsOn: [b],
-  handler() {
-    return { c: 'hey' }
-  },
-})

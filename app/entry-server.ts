@@ -6,7 +6,7 @@ import { createHead, transformHtmlTemplate } from 'unhead/server'
 
 import App from './app.vue'
 import { createAppRouter } from './router.ts'
-import { installPlugins } from './plugins'
+import { installModules, createRenderedHook } from './modules'
 
 import clientAssets from './entry-client.ts?assets=client'
 import { InitialStateServer } from './initial-state.ts'
@@ -21,12 +21,14 @@ async function handler(request: Request): Promise<Response> {
   app.use(router)
 
   const initialState = new InitialStateServer()
-  installPlugins({
+  const { onRendered, runRendered } = createRenderedHook()
+  installModules({
     app,
     router,
     // cannot type because of the overloads
     getInitialState: () => initialState as any,
     request,
+    onRendered,
   })
 
   const url = new URL(request.url)
@@ -57,6 +59,7 @@ async function handler(request: Request): Promise<Response> {
   })
 
   const renderedApp = await renderToString(app)
+  runRendered()
 
   // Serialize the SSR state so the client can rehydrate. Injected as a classic
   // (non-module) script so it runs before the deferred client entry module.

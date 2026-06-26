@@ -2,7 +2,7 @@ import { createSSRApp } from 'vue'
 import { createWebHistory, RouterLink, RouterView } from 'vue-router'
 import App from './app.vue'
 import { createAppRouter } from './router.ts'
-import { installPlugins } from './plugins'
+import { installModules } from './modules'
 
 async function main() {
   const app = createSSRApp(App)
@@ -11,7 +11,7 @@ async function main() {
   app.component('RouterLink', RouterLink)
   app.component('RouterView', RouterView)
 
-  installPlugins({
+  installModules({
     app,
     router,
     // cannot type because of the overloads
