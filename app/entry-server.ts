@@ -7,7 +7,6 @@ import { createHead, transformHtmlTemplate } from 'unhead/server'
 import App from './app.vue'
 import { createAppRouter } from './router.ts'
 import { installPlugins } from './plugins'
-import { serializeState } from './serialization.ts'
 
 import clientAssets from './entry-client.ts?assets=client'
 import { InitialStateServer } from './initial-state.ts'
@@ -63,7 +62,6 @@ async function handler(request: Request): Promise<Response> {
   // (non-module) script so it runs before the deferred client entry module.
   head.push({
     script: [{ innerHTML: `window.__INITIAL_STATE__=${initialState}` }],
-    // script: [{ innerHTML: `window.__INITIAL_STATE__=${serializeState(initialState)}` }],
   })
 
   const html = await transformHtmlTemplate(head, htmlTemplate(renderedApp))

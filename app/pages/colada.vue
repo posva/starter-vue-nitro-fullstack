@@ -54,7 +54,7 @@ onServerPrefetch(() => refresh())
             <td>{{ user.id }}</td>
             <td>{{ user.name }}</td>
             <td>{{ user.email }}</td>
-            <td>{{ new Date(user.createdAt).toLocaleString() }}</td>
+            <td>{{ user.createdAt }}</td>
           </tr>
         </tbody>
       </table>
