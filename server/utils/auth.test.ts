@@ -1,5 +1,6 @@
 import { test, expect, beforeAll } from 'vitest'
 import { resolve } from 'node:path'
+import { mockConsoleWarn, mockConsoleError } from '../../test/mock-warn'
 import { PGlite } from '@electric-sql/pglite'
 import { drizzle } from 'drizzle-orm/pglite'
 import { migrate } from 'drizzle-orm/pglite/migrator'
@@ -16,6 +17,9 @@ import { authOptions } from './auth'
 // expects (the most common integration break), these fail.
 let auth: ReturnType<typeof betterAuth>
 let db: ReturnType<typeof drizzle<typeof schema>>
+
+mockConsoleWarn()
+mockConsoleError()
 
 beforeAll(async () => {
   db = drizzle(new PGlite(), { schema })
@@ -40,6 +44,10 @@ test('email + password sign-up creates a user with a credential account', async 
   expect(accounts).toHaveLength(1)
   expect(accounts[0]!.providerId).toBe('credential')
   expect(accounts[0]!.password).toBeTruthy()
+
+  // Sign-up triggers a verification email; with no mail provider wired up it's
+  // logged instead of sent.
+  expect('[email] not sent').toHaveBeenWarned()
 })
 
 test('valid credentials sign in, wrong password is rejected', async () => {
@@ -55,6 +63,11 @@ test('valid credentials sign in, wrong password is rejected', async () => {
   await expect(
     auth.api.signInEmail({ body: { email: 'linus@example.com', password: 'wrong-password' } }),
   ).rejects.toThrow()
+
+  // Sign-up logs the unsent verification email; the rejected sign-in is logged
+  // by Better Auth as an error.
+  expect('[email] not sent').toHaveBeenWarned()
+  expect('Invalid password').toHaveBeenErrored()
 })
 
 test('signing in via a trusted provider links to the existing email account', async () => {
@@ -92,4 +105,7 @@ test('signing in via a trusted provider links to the existing email account', as
     .from(schema.account)
     .where(eq(schema.account.userId, users[0]!.id))
   expect(accounts.map((a) => a.providerId).sort()).toEqual(['credential', 'vercel'])
+
+  // The local sign-up logs its unsent verification email.
+  expect('[email] not sent').toHaveBeenWarned()
 })
