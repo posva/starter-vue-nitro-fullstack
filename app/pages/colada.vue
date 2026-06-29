@@ -11,11 +11,9 @@ interface User {
 
 // `useQuery` handles caching, deduplication, and SSR hydration for us.
 // https://pinia-colada.esm.dev/guide/queries.html
-const { state, asyncStatus, refetch, refresh } = useQuery({
+const { state, asyncStatus, refetch } = useQuery({
   key: ['users'],
-  query: async (): Promise<User[]> => {
-    return users.get<User[]>('/')
-  },
+  query: () => users.get<User[]>('/'),
 })
 </script>
 

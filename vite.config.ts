@@ -4,6 +4,7 @@ import { defineConfig, type Plugin } from 'vite'
 import vue, { type Api } from '@vitejs/plugin-vue'
 import vueRouter from 'vue-router/vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
+import bundleAnalyzer from 'vite-bundle-analyzer'
 import { nitro } from 'nitro/vite'
 
 // Resolve a dist file to an absolute path via real module resolution: find the
@@ -80,6 +81,10 @@ export default defineConfig((env) => ({
         const file = route.component
         if (file) route.addToMeta({ assetsKey: './pages' + file.split('/pages').pop() })
       },
+    }),
+    bundleAnalyzer({
+      enabled: false,
+      summary: true,
     }),
     patchVueExclude(vue(), /\?assets/),
     // clientVueRuntime(),
