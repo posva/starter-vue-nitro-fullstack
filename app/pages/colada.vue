@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { useQuery } from '@pinia/colada'
-import { fetch } from '#shared/fetch'
-import { onServerPrefetch } from 'vue'
 import { users } from '#shared/api/users'
 
 interface User {
@@ -16,17 +14,9 @@ interface User {
 const { state, asyncStatus, refetch, refresh } = useQuery({
   key: ['users'],
   query: async (): Promise<User[]> => {
-    // FIXME: why does this fail on server?
-    await users.get<User[]>('/').catch((err) => {
-      console.error('Error fetching users:', err)
-    })
-    const res = await fetch(`/api/users`)
-    if (!res.ok) throw new Error(`Request failed with ${res.status}`)
-    return res.json()
+    return users.get<User[]>('/')
   },
 })
-
-onServerPrefetch(() => refresh())
 </script>
 
 <template>
