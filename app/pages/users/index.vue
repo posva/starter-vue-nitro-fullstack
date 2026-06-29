@@ -1,33 +1,9 @@
 <script setup lang="ts">
-import { onMounted, ref, shallowRef } from 'vue'
+import { useQuery } from '@pinia/colada'
 import { RouterLink } from 'vue-router'
+import { userListQuery } from '~/queries/users'
 
-interface User {
-  id: string
-  name: string
-  email: string
-  createdAt: string
-}
-
-const users = shallowRef<User[]>([])
-const pending = ref(false)
-const error = ref<string | null>(null)
-
-async function load() {
-  pending.value = true
-  error.value = null
-  try {
-    const res = await fetch('/api/users')
-    if (!res.ok) throw new Error(`Request failed with ${res.status}`)
-    users.value = await res.json()
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to load users'
-  } finally {
-    pending.value = false
-  }
-}
-
-onMounted(load)
+const { state, asyncStatus, refresh } = useQuery(userListQuery)
 </script>
 
 <template>
@@ -38,9 +14,9 @@ onMounted(load)
     </div>
 
     <div class="card">
-      <p v-if="pending">Loading…</p>
-      <p v-else-if="error" class="error">{{ error }}</p>
-      <p v-else-if="!users.length">No users yet. Create the first one!</p>
+      <p v-if="state.status === 'pending'">Loading…</p>
+      <p v-else-if="state.status === 'error'" class="error">{{ state.error?.message }}</p>
+      <p v-else-if="!state.data?.length">No users yet. Create the first one!</p>
 
       <table v-else>
         <thead>
@@ -52,7 +28,7 @@ onMounted(load)
           </tr>
         </thead>
         <tbody>
-          <tr v-for="user in users" :key="user.id">
+          <tr v-for="user in state.data" :key="user.id">
             <td>{{ user.id }}</td>
             <td>{{ user.name }}</td>
             <td>{{ user.email }}</td>
@@ -61,7 +37,9 @@ onMounted(load)
         </tbody>
       </table>
 
-      <button class="refresh" :disabled="pending" @click="load">Refresh</button>
+      <button class="refresh" :disabled="asyncStatus === 'loading'" @click="() => refresh()">
+        Refresh
+      </button>
     </div>
   </main>
 </template>

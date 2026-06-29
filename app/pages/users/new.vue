@@ -1,32 +1,21 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
+import { useCreateUser } from '~/mutations/users'
 
 const router = useRouter()
 
 const name = ref('')
 const email = ref('')
-const pending = ref(false)
-const error = ref<string | null>(null)
+
+const { mutateAsync: createUser, asyncStatus, error } = useCreateUser()
 
 async function submit() {
-  pending.value = true
-  error.value = null
   try {
-    const res = await fetch('/api/users', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ name: name.value, email: email.value }),
-    })
-    if (!res.ok) {
-      const body = await res.json().catch(() => null)
-      throw new Error(body?.message || `Request failed with ${res.status}`)
-    }
+    await createUser({ name: name.value, email: email.value })
     await router.push('/users')
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to create user'
-  } finally {
-    pending.value = false
+  } catch {
+    // `error` is exposed reactively by the mutation.
   }
 }
 </script>
@@ -46,12 +35,12 @@ async function submit() {
         <input v-model="email" type="email" required autocomplete="email" />
       </label>
 
-      <p v-if="error" class="error">{{ error }}</p>
+      <p v-if="error" class="error">{{ error.message }}</p>
 
       <div class="actions">
         <RouterLink to="/users">Cancel</RouterLink>
-        <button type="submit" :disabled="pending">
-          {{ pending ? 'Creating…' : 'Create user' }}
+        <button type="submit" :disabled="asyncStatus === 'loading'">
+          {{ asyncStatus === 'loading' ? 'Creating…' : 'Create user' }}
         </button>
       </div>
     </form>

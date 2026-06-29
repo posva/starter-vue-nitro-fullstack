@@ -28,9 +28,6 @@ const { session, pending } = useAuth()
         <RouterLink to="/users" active-class="active">Users</RouterLink>
       </li>
       <li>
-        <RouterLink to="/colada" active-class="active">Colada</RouterLink>
-      </li>
-      <li>
         <RouterLink to="/about" active-class="active">About</RouterLink>
       </li>
       <li class="spacer" />
