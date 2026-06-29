@@ -101,7 +101,7 @@ export function installModuleList(ctx: ModuleContext, mods: Iterable<AnyModule>)
 export function installModules(ctx: ModuleContext): void {
   const moduleFiles = import.meta.glob<{ default?: AnyModule }>(
     // TODO: could we handle client only and server only modules with .server.ts?
-    ['./*.ts', '!./index.ts', '!./types.ts'],
+    ['./*.ts', '!./index.ts', '!./types.ts', '!./**/*.{spec,test}.ts'],
     { eager: true },
   )
 
