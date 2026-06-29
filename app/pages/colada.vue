@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { useQuery } from '@pinia/colada'
-import { fetch as nitroFetch } from 'nitro'
+import { fetch } from '#shared/fetch'
 import { onServerPrefetch } from 'vue'
-
-// FIXME: the fetch should come from nitro on server but not in client
+import { users } from '#shared/api/users'
 
 interface User {
   id: string
@@ -17,7 +16,11 @@ interface User {
 const { state, asyncStatus, refetch, refresh } = useQuery({
   key: ['users'],
   query: async (): Promise<User[]> => {
-    const res = await (import.meta.env.SSR ? nitroFetch : fetch)(`/api/users`)
+    // FIXME: why does this fail on server?
+    await users.get<User[]>('/').catch((err) => {
+      console.error('Error fetching users:', err)
+    })
+    const res = await fetch(`/api/users`)
     if (!res.ok) throw new Error(`Request failed with ${res.status}`)
     return res.json()
   },
