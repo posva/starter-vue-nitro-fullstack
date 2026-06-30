@@ -31,7 +31,7 @@ describe('installModuleList', () => {
 
   it('provides dependency additions to dependents', () => {
     const a = defineModule(() => ({ a: 'from-a' }))
-    const handlerB = vi.fn((ctx: any) => ({ b: 'from-b' }))
+    const handlerB = vi.fn(() => ({ b: 'from-b' }))
     const b = defineModule({ dependsOn: [a], handler: handlerB })
     installModuleList(mockCtx, [b])
     expect(handlerB).toHaveBeenCalledWith(expect.objectContaining({ a: 'from-a' }))
@@ -49,17 +49,17 @@ describe('installModuleList', () => {
   it('provides transitive dependency additions', () => {
     const a = defineModule(() => ({ a: 'a' }))
     const b = defineModule({ dependsOn: [a], handler: () => ({ b: 'b' }) })
-    const handlerC = vi.fn((ctx: any) => ({}))
+    const handlerC = vi.fn(() => ({}))
     const c = defineModule({ dependsOn: [b], handler: handlerC })
     installModuleList(mockCtx, [c])
     expect(handlerC).toHaveBeenCalledWith(expect.objectContaining({ a: 'a', b: 'b' }))
   })
 
   it('throws on circular dependencies', () => {
-    // Use any to break type safety intentionally
-    const a = defineModule({ dependsOn: [] as any, handler: () => ({}) })
+    // Use unknown[] to allow adding stuff later
+    const a = defineModule({ dependsOn: [] as unknown[], handler: () => ({}) })
     const b = defineModule({ dependsOn: [a], handler: () => ({}) })
-    ;(a as any).dependsOn = [b]
+    a.dependsOn = [b]
     expect(() => installModuleList(mockCtx, [a])).toThrow('Circular')
   })
 
