@@ -73,7 +73,7 @@ async function submit() {
 </template>
 
 <style scoped>
-/* Layout only — colours/components come from the global theme (styles.css). */
+/* Layout only — colours/components come from the global theme (main.css). */
 main {
   max-width: 420px;
   margin: 2rem auto;

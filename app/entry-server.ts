@@ -81,6 +81,19 @@ function htmlTemplate(body: string): string {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vue Router Custom Framework</title>
+  <!-- No-flash theme boot: set data-theme + accent before first paint (mirrors use-theme.ts). -->
+  <script>
+    (function () {
+      try {
+        var m = localStorage.getItem('theme') || 'system'
+        var dark = m === 'dark' || (m === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)
+        var el = document.documentElement
+        el.dataset.theme = dark ? 'dark' : 'light'
+        var h = localStorage.getItem('accent-hue')
+        if (h) el.style.setProperty('--accent-hue', h)
+      } catch (e) {}
+    })()
+  </script>
 </head>
 <body>
   <div id="root">${body}</div>

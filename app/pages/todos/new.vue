@@ -42,7 +42,7 @@ async function submit() {
 </template>
 
 <style scoped>
-/* Layout only — colours/inputs come from the global theme (styles.css). */
+/* Layout only — colours/inputs come from the global theme (main.css). */
 h1 {
   color: var(--primary);
 }

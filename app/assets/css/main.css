@@ -1,1 +1,396 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+
+/*
+ * Design system — Tailwind v4, driven entirely by CSS custom properties so the
+ * whole UI can be re-themed at runtime:
+ *   - light / dark via the `data-theme` attribute on <html> (see use-theme.ts)
+ *   - accent re-tinted live by changing a single `--accent-hue` variable
+ * Colors are oklch for perceptually-even lightness across hues. The app's pages
+ * reference the same `--primary`, `--surface`, … names, so they re-theme for free.
+ */
+
+/* Class/attribute dark mode (no media-query lock-in) → `dark:` utilities follow [data-theme]. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ── Tokens ───────────────────────────────────────────────────────────────── */
+:root {
+  color-scheme: light;
+
+  /* Accent is a hue knob: change --accent-hue at runtime to re-tint everything. */
+  --accent-hue: 280;
+
+  /* palette (light) */
+  --bg: oklch(0.985 0.004 285);
+  --surface: oklch(1 0 0);
+  --surface-2: oklch(0.972 0.005 285);
+  --border: oklch(0.916 0.006 285);
+  --text: oklch(0.21 0.02 285);
+  --text-dim: oklch(0.52 0.018 285);
+
+  --primary: oklch(0.575 0.215 var(--accent-hue));
+  --primary-hover: oklch(0.51 0.22 var(--accent-hue));
+  --on-primary: oklch(0.99 0 0);
+
+  --danger: oklch(0.585 0.21 25);
+  --success: oklch(0.62 0.16 155);
+
+  --accent-soft-bg: color-mix(in oklab, var(--primary) 12%, transparent);
+  --warn-text: oklch(0.52 0.13 75);
+  --warn-bg: color-mix(in oklab, oklch(0.7 0.16 75) 16%, transparent);
+  --success-soft-bg: color-mix(in oklab, var(--success) 14%, transparent);
+
+  /* shape & elevation */
+  --radius: 12px;
+  --ring: 0 0 0 3px color-mix(in oklab, var(--primary) 35%, transparent);
+  --shadow-sm: 0 1px 2px oklch(0.2 0.02 285 / 0.06);
+  --shadow-md: 0 1px 2px oklch(0.2 0.02 285 / 0.06), 0 8px 24px -8px oklch(0.2 0.02 285 / 0.14);
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg: oklch(0.17 0.013 285);
+  --surface: oklch(0.213 0.016 285);
+  --surface-2: oklch(0.256 0.019 285);
+  --border: oklch(0.31 0.02 285);
+  --text: oklch(0.965 0.008 285);
+  --text-dim: oklch(0.72 0.018 285);
+
+  --primary: oklch(0.72 0.185 var(--accent-hue));
+  --primary-hover: oklch(0.8 0.16 var(--accent-hue));
+  --on-primary: oklch(0.16 0.02 285);
+
+  --danger: oklch(0.72 0.17 25);
+  --success: oklch(0.78 0.15 155);
+
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.4);
+  --shadow-md: 0 1px 2px oklch(0 0 0 / 0.4), 0 12px 32px -10px oklch(0 0 0 / 0.6);
+}
+
+/* Map tokens → Tailwind theme. `inline` emits var(--…) into utilities so runtime
+ * swaps re-tint `bg-primary`, `text-text-dim`, `border-border`, `ring-primary`, … live. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-border: var(--border);
+  --color-text: var(--text);
+  --color-text-dim: var(--text-dim);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-accent-soft: var(--accent-soft-bg);
+
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
+    Arial, sans-serif;
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: var(--font-sans);
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background-color: var(--bg);
+    /* Two soft accent glows anchored to the top corners — adapt to the live accent. */
+    background-image:
+      radial-gradient(
+        60rem 40rem at 100% -10%,
+        color-mix(in oklab, var(--primary) 14%, transparent),
+        transparent 60%
+      ),
+      radial-gradient(
+        50rem 36rem at -10% 0%,
+        color-mix(in oklab, var(--primary) 9%, transparent),
+        transparent 55%
+      );
+    background-attachment: fixed;
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Smooth the light/dark flip. The no-flash script sets the theme before paint,
+   * so the very first render still lands on the right colors without a transition. */
+  body,
+  nav,
+  .card,
+  input,
+  textarea,
+  select,
+  button,
+  .button {
+    transition:
+      background-color 0.3s ease,
+      border-color 0.3s ease,
+      color 0.3s ease;
+  }
+
+  h1,
+  h2,
+  h3 {
+    color: var(--text);
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+  }
+
+  h1 {
+    font-size: clamp(1.9rem, 1.2rem + 2.4vw, 2.6rem);
+    margin: 0 0 0.5rem;
+  }
+
+  a {
+    color: var(--primary);
+    text-decoration: none;
+  }
+  a:hover {
+    color: var(--primary-hover);
+  }
+
+  main {
+    max-width: 60rem;
+    margin: 0 auto;
+    padding: clamp(1.5rem, 1rem + 3vw, 3rem) 1.25rem 4rem;
+  }
+
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--ring);
+    border-radius: 6px;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 28%, transparent);
+  }
+}
+
+/* ── Components ───────────────────────────────────────────────────────────── */
+@layer components {
+  .subtitle {
+    color: var(--text-dim);
+    font-size: 1.15rem;
+    margin-bottom: 2rem;
+  }
+
+  /* Surfaces — hairline border + layered shadow + faint top-down sheen. */
+  .card {
+    background-color: var(--surface);
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--primary) 4%, transparent),
+      transparent 120px
+    );
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.75rem;
+    box-shadow: var(--shadow-md);
+  }
+
+  /* Forms */
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--text-dim);
+  }
+
+  input,
+  textarea,
+  select {
+    width: 100%;
+    padding: 0.65rem 0.8rem;
+    font: inherit;
+    color: var(--text);
+    background-color: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: color-mix(in oklab, var(--text-dim) 80%, transparent);
+  }
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: var(--ring);
+  }
+
+  /* Buttons — base is the primary action; modifiers below for variants. */
+  button,
+  .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.62rem 1.05rem;
+    font: inherit;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--on-primary);
+    background-image: linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--primary) 88%, white),
+      var(--primary)
+    );
+    border: 1px solid transparent;
+    border-radius: 10px;
+    cursor: pointer;
+    box-shadow:
+      var(--shadow-sm),
+      inset 0 1px 0 color-mix(in oklab, white 22%, transparent);
+    transition:
+      background-color 0.18s ease,
+      box-shadow 0.18s ease,
+      transform 0.06s ease;
+  }
+  button:hover:not(:disabled),
+  .button:hover:not(:disabled) {
+    background-image: linear-gradient(180deg, var(--primary), var(--primary-hover));
+    box-shadow: var(--shadow-md);
+  }
+  button:active:not(:disabled),
+  .button:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  button:disabled,
+  .button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    box-shadow: none;
+  }
+
+  /* Ghost / secondary */
+  .button.ghost,
+  .btn-secondary {
+    color: var(--primary);
+    background: transparent;
+    background-image: none;
+    border-color: var(--border);
+    box-shadow: none;
+  }
+  .button.ghost:hover:not(:disabled),
+  .btn-secondary:hover:not(:disabled) {
+    background-color: var(--surface-2);
+    background-image: none;
+    color: var(--primary);
+  }
+
+  /* Neutral full-width choice (social / passkey) */
+  .btn-neutral {
+    width: 100%;
+    color: var(--text);
+    background: var(--surface-2);
+    background-image: none;
+    border-color: var(--border);
+    box-shadow: none;
+  }
+  .btn-neutral:hover:not(:disabled) {
+    background-color: color-mix(in oklab, var(--surface-2) 70%, var(--border));
+    background-image: none;
+    color: var(--text);
+  }
+
+  /* Text/link button */
+  .link {
+    padding: 0;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--primary);
+    background: none;
+    background-image: none;
+    border: none;
+    box-shadow: none;
+    cursor: pointer;
+  }
+  .link:hover:not(:disabled) {
+    color: var(--primary-hover);
+    background: none;
+    background-image: none;
+    box-shadow: none;
+  }
+
+  /* Small bits */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--warn-text);
+    background: var(--warn-bg);
+    border-radius: 999px;
+    padding: 0.2rem 0.5rem;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--success);
+    background: var(--success-soft-bg);
+    border-radius: 999px;
+    padding: 0.12rem 0.5rem;
+  }
+
+  .muted {
+    color: var(--text-dim);
+    font-size: 0.85rem;
+  }
+
+  .hint {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+  }
+
+  .error {
+    color: var(--danger);
+    margin: 0;
+  }
+
+  .notice {
+    color: var(--success);
+    margin: 0;
+  }
+
+  /* "or" divider */
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 1.25rem 0;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .divider::before,
+  .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+}
