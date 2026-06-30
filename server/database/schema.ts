@@ -2,19 +2,6 @@ import { pgTable, uuid, text, boolean, integer, timestamp } from 'drizzle-orm/pg
 import { createdAt } from './utils'
 
 // ---------------------------------------------------------------------------
-// Demo table (not auth-related): showcases raw Drizzle usage in /api/users.
-// ---------------------------------------------------------------------------
-export const users = pgTable('users', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
-  email: text('email').notNull().unique(),
-  createdAt,
-})
-
-export type User = typeof users.$inferSelect
-export type NewUser = typeof users.$inferInsert
-
-// ---------------------------------------------------------------------------
 // Better Auth tables.
 //
 // These match the schema Better Auth's drizzle adapter expects: the *property
@@ -93,3 +80,21 @@ export const passkey = pgTable('passkey', {
 
 export type AuthUser = typeof user.$inferSelect
 export type Session = typeof session.$inferSelect
+
+// ---------------------------------------------------------------------------
+// Demo table (not part of auth): showcases raw Drizzle usage in /api/todos.
+//
+// `userId` links a todo to the signed-in user who created it, or is null for
+// anonymous visitors — so the demo doubles as an example of joining your own
+// data to Better Auth's `user` table.
+// ---------------------------------------------------------------------------
+export const todos = pgTable('todos', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  title: text('title').notNull(),
+  completed: boolean('completed').notNull().default(false),
+  userId: text('user_id').references(() => user.id, { onDelete: 'cascade' }),
+  createdAt,
+})
+
+export type Todo = typeof todos.$inferSelect
+export type NewTodo = typeof todos.$inferInsert

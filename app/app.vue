@@ -25,7 +25,7 @@ const { session, pending } = useAuth()
         }}</RouterLink>
       </li>
       <li>
-        <RouterLink to="/users" active-class="active">Users</RouterLink>
+        <RouterLink to="/todos" active-class="active">Todos</RouterLink>
       </li>
       <li>
         <RouterLink to="/about" active-class="active">About</RouterLink>

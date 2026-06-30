@@ -1,19 +1,18 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
-import { useCreateUser } from '~/mutations/users'
+import { useCreateTodo } from '~/mutations/todos'
 
 const router = useRouter()
 
-const name = ref('')
-const email = ref('')
+const title = ref('')
 
-const { mutateAsync: createUser, asyncStatus, error } = useCreateUser()
+const { mutateAsync: createTodo, asyncStatus, error } = useCreateTodo()
 
 async function submit() {
   try {
-    await createUser({ name: name.value, email: email.value })
-    await router.push('/users')
+    await createTodo({ title: title.value })
+    await router.push('/todos')
   } catch {
     // `error` is exposed reactively by the mutation.
   }
@@ -22,25 +21,20 @@ async function submit() {
 
 <template>
   <main>
-    <h1>New user</h1>
+    <h1>New todo</h1>
 
     <form class="card" @submit.prevent="submit">
       <label>
-        <span>Name</span>
-        <input v-model="name" type="text" required autocomplete="name" />
-      </label>
-
-      <label>
-        <span>Email</span>
-        <input v-model="email" type="email" required autocomplete="email" />
+        <span>Title</span>
+        <input v-model="title" type="text" required />
       </label>
 
       <p v-if="error" class="error">{{ error.message }}</p>
 
       <div class="actions">
-        <RouterLink to="/users">Cancel</RouterLink>
+        <RouterLink to="/todos">Cancel</RouterLink>
         <button type="submit" :disabled="asyncStatus === 'loading'">
-          {{ asyncStatus === 'loading' ? 'Creating…' : 'Create user' }}
+          {{ asyncStatus === 'loading' ? 'Creating…' : 'Create todo' }}
         </button>
       </div>
     </form>

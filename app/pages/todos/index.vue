@@ -1,38 +1,38 @@
 <script setup lang="ts">
 import { useQuery } from '@pinia/colada'
 import { RouterLink } from 'vue-router'
-import { userListQuery } from '~/queries/users'
+import { todoListQuery } from '~/queries/todos'
 
-const { state, asyncStatus, refresh } = useQuery(userListQuery)
+const { state, asyncStatus, refresh } = useQuery(todoListQuery)
 </script>
 
 <template>
   <main>
     <div class="header">
-      <h1>Users</h1>
-      <RouterLink class="button" to="/users/new">New user</RouterLink>
+      <h1>Todos</h1>
+      <RouterLink class="button" to="/todos/new">New todo</RouterLink>
     </div>
 
     <div class="card">
       <p v-if="state.status === 'pending'">Loading…</p>
       <p v-else-if="state.status === 'error'" class="error">{{ state.error?.message }}</p>
-      <p v-else-if="!state.data?.length">No users yet. Create the first one!</p>
+      <p v-else-if="!state.data?.length">No todos yet. Create the first one!</p>
 
       <table v-else>
         <thead>
           <tr>
-            <th>ID</th>
-            <th>Name</th>
-            <th>Email</th>
+            <th>Done</th>
+            <th>Title</th>
+            <th>Creator</th>
             <th>Created</th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="user in state.data" :key="user.id">
-            <td>{{ user.id }}</td>
-            <td>{{ user.name }}</td>
-            <td>{{ user.email }}</td>
-            <td>{{ user.createdAt }}</td>
+          <tr v-for="todo in state.data" :key="todo.id">
+            <td>{{ todo.completed ? '✅' : '⬜️' }}</td>
+            <td>{{ todo.title }}</td>
+            <td>{{ todo.userId ? 'User' : 'Anonymous' }}</td>
+            <td>{{ todo.createdAt }}</td>
           </tr>
         </tbody>
       </table>
