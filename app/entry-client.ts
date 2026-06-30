@@ -6,6 +6,13 @@ import { createAppRouter } from './router.ts'
 import { installModules } from './modules'
 import { isExpectedApiError } from './lib/errors.ts'
 
+// Vite DevTools embedded panel (https://devtools.vite.dev). This app has no HTML
+// entry (nitro renders the document), so the client must be injected from the
+// browser entry. Dev-only dynamic import keeps it out of the production bundle.
+if (import.meta.env.DEV) {
+  import('@vitejs/devtools/client/inject')
+}
+
 async function main() {
   const app = createSSRApp(App)
   const router = createAppRouter(createWebHistory())
