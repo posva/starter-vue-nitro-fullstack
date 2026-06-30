@@ -2,6 +2,7 @@ import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { defineConfig, type Plugin } from 'vite'
 import vue, { type Api } from '@vitejs/plugin-vue'
+import tailwindcss from '@tailwindcss/vite'
 import vueRouter from 'vue-router/vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
 import bundleAnalyzer from 'vite-bundle-analyzer'
@@ -65,7 +66,8 @@ export default defineConfig((env) => ({
     exclude: ['pinia'],
   },
   plugins: [
-    //
+    // Tailwind v4 only (no Nuxt UI) — isolates the Tailwind toolchain build cost.
+    tailwindcss(),
     vueRouter({
       routesFolder: 'app/pages',
       dts: './app/routes.d.ts',

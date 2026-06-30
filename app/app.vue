@@ -4,6 +4,7 @@ import { SpeedInsights } from '@vercel/speed-insights/vue'
 import { useAuth } from './lib/use-auth'
 import { PiniaColadaDevtools } from '@pinia/colada-devtools'
 import './styles.css'
+import './assets/css/main.css'
 
 const { session, pending } = useAuth()
 </script>
