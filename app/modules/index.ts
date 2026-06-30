@@ -3,7 +3,7 @@ import type { ModuleContext, DefineModuleOptions } from './types'
 export type { ModuleContext, DefineModuleOptions }
 
 /** A module with its specifics erased, suitable for the install graph. */
-type AnyModule = DefineModuleOptions<unknown, readonly unknown[]>
+type AnyModule = DefineModuleOptions<{}, readonly unknown[]>
 
 /**
  * Creates the server-only {@link ModuleContext.onRendered} registrar together
@@ -68,11 +68,15 @@ export function installModuleList(ctx: ModuleContext, mods: Iterable<AnyModule>)
 
     // `ctx` carries `onRendered` (on the server), so it flows to every handler.
     const moduleCtx = { ...ctx, ...depAccumulated }
-    const ownAdditions = mod.handler(moduleCtx as ModuleContext)
+    // A handler that only performs setup may return `{}`, `undefined`, or
+    // nothing at all — they are all equivalent. Spreading `undefined` below is
+    // a no-op, so a missing return simply contributes no additions.
+    const ownAdditions = mod.handler(moduleCtx)
+
     visiting.delete(mod)
 
     // Store dep + own so callers get the full transitive picture.
-    const accumulated = { ...depAccumulated, ...(ownAdditions as object) }
+    const accumulated = { ...depAccumulated, ...ownAdditions }
     installed.set(mod, accumulated)
 
     return accumulated

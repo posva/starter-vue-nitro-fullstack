@@ -8,5 +8,4 @@ import ui from '@nuxt/ui/vue-plugin'
 // https://ui.nuxt.com/
 export default defineModule(({ app }) => {
   app.use(ui)
-  return {}
 })

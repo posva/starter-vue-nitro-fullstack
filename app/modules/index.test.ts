@@ -15,7 +15,8 @@ describe('defineModule', () => {
     const a = defineModule(() => ({ a: 1 }))
     const b = defineModule({ dependsOn: [a], handler: () => ({ b: 2 }) })
     expect(b.dependsOn).toEqual([a])
-    expect(b.handler(mockCtx)).toEqual({ b: 2 })
+    // b's ctx requires a's additions; the handler ignores ctx, so stub them in.
+    expect(b.handler({ ...mockCtx, a: 1 })).toEqual({ b: 2 })
   })
 })
 
@@ -65,6 +66,27 @@ describe('installModuleList', () => {
   it('returns nothing', () => {
     const mod = defineModule(() => ({}))
     expect(installModuleList(mockCtx, [mod])).toBeUndefined()
+  })
+
+  it('treats all empty returns the same at runtime', () => {
+    const seen: unknown[] = []
+    const record = defineModule({
+      dependsOn: [
+        defineModule(() => {}),
+        defineModule(() => undefined),
+        defineModule(() => {
+          return
+        }),
+        defineModule(() => ({})),
+      ],
+      handler: (ctx) => {
+        seen.push({ ...ctx })
+        return {}
+      },
+    })
+    expect(() => installModuleList(mockCtx, [record])).not.toThrow()
+    // none of the empty-returning deps add keys to the context
+    expect(Object.keys(seen[0] as object)).toEqual([])
   })
 
   it('lets modules register onRendered callbacks that run in reverse install order', () => {
@@ -128,6 +150,40 @@ describe('types', () => {
     defineModule((ctx) => {
       expectTypeOf(ctx.onRendered).toEqualTypeOf<((fn: () => void) => void) | undefined>()
       return {}
+    })
+  })
+
+  it('accepts every form of empty return', () => {
+    // no return
+    defineModule(() => {})
+    // explicit `return`
+    defineModule(() => {
+      return
+    })
+    // `return undefined`
+    defineModule(() => undefined)
+    // `return {}`
+    defineModule(() => ({}))
+  })
+
+  it('empty returns contribute nothing to a dependent ctx', () => {
+    const noReturn = defineModule(() => {})
+    const returnUndefined = defineModule(() => undefined)
+    const returnVoid = defineModule(() => {
+      return
+    })
+    const returnEmpty = defineModule(() => ({}))
+    const withValue = defineModule(() => ({ value: 1 }))
+
+    defineModule({
+      dependsOn: [noReturn, returnUndefined, returnVoid, returnEmpty, withValue],
+      handler: (ctx) => {
+        // the empty-returning deps add no keys; only `withValue` does
+        expectTypeOf(ctx.value).toEqualTypeOf<number>()
+        // ctx stays a clean object — `void`/`undefined` never leak in
+        expectTypeOf<keyof typeof ctx>().toEqualTypeOf<keyof (ModuleContext & { value: number })>()
+        return {}
+      },
     })
   })
 })

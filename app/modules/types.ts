@@ -51,7 +51,6 @@ export interface ModuleContext {
    *       // release server-only resources
    *     })
    *   }
-   *   return {}
    * })
    * ```
    */
@@ -75,12 +74,19 @@ export interface DefineModuleOptions<Additions, DependsOn extends readonly unkno
 
   /**
    * Sets up the module and returns the additions exposed to dependent modules.
+   * A setup-only module can simply return nothing.
    *
    * @param ctx - The {@link ModuleContext} augmented with the additions of all
    * (transitive) dependencies.
    */
   handler: (ctx: Prettify<ModuleContext & MergeReturns<DependsOn>>) => Additions
 }
+
+/**
+ * Treats a `void`/`undefined` return (a setup-only module) as `{}` so it adds
+ * nothing to a dependent's context instead of reducing it to `never`.
+ */
+type NormalizeAdditions<Additions> = [Additions] extends [void | undefined] ? {} : Additions
 
 /**
  * Flattens an intersection of object types into a single object type so that
@@ -100,7 +106,7 @@ type MergeReturns<Modules extends readonly unknown[]> = Modules extends []
   ? {}
   : Modules extends readonly [infer Head, ...infer Tail]
     ? Head extends DefineModuleOptions<infer Additions, infer Deps>
-      ? Additions & MergeReturns<Deps> & MergeReturns<Tail>
+      ? NormalizeAdditions<Additions> & MergeReturns<Deps> & MergeReturns<Tail>
       : MergeReturns<Tail>
     : {}
 
