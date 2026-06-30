@@ -40,6 +40,31 @@ export function authOptions(db: DrizzleDB): BetterAuthOptions {
 
   const isProd = process.env.NODE_ENV === 'production'
 
+  // A single Vercel build answers to several rotating hostnames — the unique
+  // per-deploy `VERCEL_URL`, the stable git-branch preview alias, and the
+  // project's production domain. Pinning one would make the OAuth `redirect_uri`,
+  // the state cookie and the CSRF origin check land on a *different* host than
+  // the browser is on (the "invalid origin" you hit on previews). Instead we
+  // hand Better Auth its multi-domain config built from Vercel's *own* injected
+  // URLs — so it resolves the origin per request, gated to this deployment's
+  // real hosts, with zero hardcoded domains and nothing to set by hand. These
+  // are also auto-added to `trustedOrigins`. See Better Auth's `DynamicBaseURLConfig`.
+  const vercelHosts = [
+    process.env.VERCEL_URL,
+    process.env.VERCEL_BRANCH_URL,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+  ].filter((h): h is string => !!h)
+
+  // Public origin, in priority order:
+  //   1. BETTER_AUTH_URL — explicit, wins everywhere (set a stable prod domain).
+  //   2. Vercel — dynamic allowedHosts so every deployment alias just works.
+  //   3. localhost — local dev / tests.
+  const baseURL: BetterAuthOptions['baseURL'] = process.env.BETTER_AUTH_URL
+    ? process.env.BETTER_AUTH_URL
+    : vercelHosts.length > 0
+      ? { allowedHosts: vercelHosts, protocol: 'https', fallback: `https://${vercelHosts[0]}` }
+      : appUrl
+
   // In prod we require a verified email to sign in — that only works if a mail
   // provider can actually send the verification link. Fail loud on misconfig.
   if (isProd && !isEmailConfigured()) {
@@ -50,17 +75,18 @@ export function authOptions(db: DrizzleDB): BetterAuthOptions {
   }
 
   return {
-    baseURL: appUrl,
+    baseURL,
     // A stable secret keeps sessions valid across restarts. MUST be overridden
     // in production via BETTER_AUTH_SECRET (`openssl rand -base64 32`).
     secret: process.env.BETTER_AUTH_SECRET || 'dev-only-insecure-secret-change-me-0123456789',
 
-    // CSRF origin allow-list. Better Auth always trusts `baseURL`.
-    // In dev, trust whatever local origin the request actually came from — any
-    // port AND any `*.localhost` subdomain (e.g. https://vue-nitro.localhost),
-    // any scheme — so it works with no config. In production nothing extra is
-    // trusted (only `baseURL`), so cross-origin authenticated requests stay
-    // blocked.
+    // CSRF origin allow-list. Better Auth always trusts `baseURL` (on Vercel
+    // that's every host in the dynamic `allowedHosts` config above, so previews
+    // need nothing extra here). In dev, trust whatever local origin the request
+    // actually came from — any port AND any `*.localhost` subdomain (e.g.
+    // https://vue-nitro.localhost), any scheme — so it works with no config. In
+    // production nothing extra is trusted (only `baseURL`), so cross-origin
+    // authenticated requests stay blocked.
     // NOTE: Better Auth also calls this once with no request (to seed the static
     // list), so `request` may be undefined.
     trustedOrigins: (request?: Request) => {

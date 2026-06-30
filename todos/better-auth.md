@@ -46,11 +46,14 @@ roughly ordered by importance.
       and configure a store (in-memory is per-instance only; use the DB or a
       KV/Redis store on multi-instance/serverless).
 - [x] **Trusted origins**. `trustedOrigins` trusts any localhost origin in dev
-      (so any Vite port works) and only `baseURL` in prod. **Note**: Vercel
-      preview deployments have changing URLs — `VERCEL_URL` covers the current
-      one via `baseURL`, but if you hit auth across preview domains, extend the
-      dev branch of `trustedOrigins` (in `server/utils/auth.ts`) to also allow
-      `*.vercel.app` or your preview pattern.
+      (so any Vite port works) and only `baseURL` in prod. **Vercel previews**:
+      a single build answers to several rotating hostnames (per-deploy
+      `VERCEL_URL`, the git-branch alias, the prod domain), so `baseURL` is set
+      to Better Auth's dynamic `{ allowedHosts }` config built from those
+      injected URLs (`server/utils/auth.ts`). It resolves the origin per request
+      and auto-trusts those hosts — no hardcoded domain, nothing to set by hand.
+      An explicit `BETTER_AUTH_URL` still overrides it. A truly custom preview
+      domain Vercel doesn't inject as an env var would need `BETTER_AUTH_URL`.
 - [ ] **Cookie cache** (`session.cookieCache`) to cut DB reads per request.
 - [ ] **`databaseHooks`** if you need to mirror auth users into the demo `users`
       table or run side effects on user/session create.
