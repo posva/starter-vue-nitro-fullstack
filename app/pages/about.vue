@@ -1,9 +1,13 @@
 <template>
-  <main>
-    <h1>About</h1>
-    <div class="card">
+  <div class="mx-auto max-w-2xl space-y-6">
+    <UPageHeader
+      title="About"
+      description="A simple Vue Router demo app built with Vite Plugin Fullstack."
+    />
+
+    <UCard>
       <p>This is a simple Vue Router demo app built with Vite Plugin Fullstack.</p>
-      <p>It demonstrates basic routing and server-side rendering.</p>
-    </div>
-  </main>
+      <p class="mt-2 text-muted">It demonstrates basic routing and server-side rendering.</p>
+    </UCard>
+  </div>
 </template>

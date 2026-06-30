@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import * as z from 'zod'
+import type { FormSubmitEvent } from '@nuxt/ui'
 import { authClient } from '../lib/auth-client'
 import { errorMessage } from '../lib/errors'
 
@@ -8,10 +10,16 @@ const route = useRoute()
 const router = useRouter()
 
 const token = computed(() => route.params.token)
-const password = ref('')
 const pending = ref(false)
 const error = ref<string | null>(null)
 const done = ref(false)
+
+const schema = z.object({
+  password: z.string().min(8, 'Min 8 characters'),
+})
+type Schema = z.output<typeof schema>
+
+const state = reactive<Partial<Schema>>({ password: '' })
 
 definePage({
   params: {
@@ -28,12 +36,12 @@ onMounted(() => {
   if (!token.value) error.value = 'Missing or invalid reset token.'
 })
 
-async function submit() {
+async function submit(event: FormSubmitEvent<Schema>) {
   error.value = null
   pending.value = true
   try {
     const { error: e } = await authClient.resetPassword({
-      newPassword: password.value,
+      newPassword: event.data.password,
       token: token.value,
     })
     if (e) throw new Error(e.message)
@@ -48,44 +56,45 @@ async function submit() {
 </script>
 
 <template>
-  <main>
-    <div class="card">
-      <h1>Reset password</h1>
-      <p v-if="done" class="notice">Password updated. Redirecting to sign in…</p>
-      <form v-else @submit.prevent="submit">
-        <label>
-          New password
-          <input
-            v-model="password"
+  <div class="mx-auto max-w-sm py-4">
+    <UCard>
+      <template #header>
+        <h1 class="text-xl font-semibold text-highlighted">Reset password</h1>
+      </template>
+
+      <UAlert
+        v-if="done"
+        color="success"
+        variant="subtle"
+        icon="i-lucide-circle-check"
+        description="Password updated. Redirecting to sign in…"
+      />
+      <UForm v-else :schema="schema" :state="state" class="space-y-4" @submit="submit">
+        <UFormField name="password" label="New password" required>
+          <UInput
+            v-model="state.password"
             type="password"
             autocomplete="new-password"
-            required
-            minlength="8"
+            class="w-full"
           />
-        </label>
-        <p v-if="error" class="error">{{ error }}</p>
-        <button class="button" type="submit" :disabled="pending || !token">
-          {{ pending ? 'Updating…' : 'Update password' }}
-        </button>
-      </form>
-    </div>
-  </main>
+        </UFormField>
+
+        <UAlert
+          v-if="error"
+          color="error"
+          variant="subtle"
+          icon="i-lucide-circle-alert"
+          :description="error"
+        />
+
+        <UButton
+          type="submit"
+          block
+          label="Update password"
+          :loading="pending"
+          :disabled="!token"
+        />
+      </UForm>
+    </UCard>
+  </div>
 </template>
-
-<style scoped>
-/* Layout only — colours/components come from the global theme (styles.css). */
-main {
-  max-width: 420px;
-  margin: 2rem auto;
-}
-
-h1 {
-  margin-bottom: 1.25rem;
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-</style>

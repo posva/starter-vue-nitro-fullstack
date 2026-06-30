@@ -1,0 +1,10 @@
+/*
+ * Global styles — Tailwind v4 + Nuxt UI design tokens.
+ *
+ * Theming (colors, radius, fonts) is configured through Nuxt UI's app config
+ * and Tailwind's `@theme`. Components use Nuxt UI's semantic colors
+ * (text-default, bg-elevated, border-muted, …) so nothing here hardcodes a hue.
+ * Light/dark is driven by the `.dark` class on <html> (see entry-server.ts).
+ */
+@import 'tailwindcss';
+@import '@nuxt/ui';

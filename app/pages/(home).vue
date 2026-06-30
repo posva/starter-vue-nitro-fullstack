@@ -9,41 +9,17 @@ function increment() {
 </script>
 
 <template>
-  <main>
-    <div class="hero">
-      <h1>Vue Router Custom Framework</h1>
-      <p class="subtitle">A simple demo app with Vite</p>
+  <div class="space-y-8">
+    <div class="text-center">
+      <h1 class="text-3xl font-bold text-highlighted">Vue Router Custom Framework</h1>
+      <p class="mt-2 text-lg text-muted">A simple demo app with Vite + Nitro + Nuxt UI</p>
     </div>
 
-    <div class="card counter-card">
-      <p>Count: {{ count }}</p>
-      <button @click="increment">Increment</button>
-    </div>
-  </main>
+    <UCard class="mx-auto max-w-sm text-center">
+      <p class="text-2xl font-bold tabular-nums">Count: {{ count }}</p>
+      <template #footer>
+        <UButton icon="i-lucide-plus" label="Increment" block @click="increment" />
+      </template>
+    </UCard>
+  </div>
 </template>
-
-<style scoped>
-.hero {
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-.hero h1 {
-  color: var(--primary);
-}
-
-.counter-card {
-  text-align: center;
-}
-
-.counter-card h2 {
-  color: var(--primary);
-  margin-bottom: 1rem;
-}
-
-.counter-card p {
-  font-size: 1.5rem;
-  font-weight: bold;
-  margin: 1rem 0;
-}
-</style>

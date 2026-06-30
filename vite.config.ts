@@ -1,7 +1,9 @@
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
 import vue, { type Api } from '@vitejs/plugin-vue'
+import ui from '@nuxt/ui/vite'
 import vueRouter from 'vue-router/vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
 import bundleAnalyzer from 'vite-bundle-analyzer'
@@ -14,6 +16,10 @@ import { nitro } from 'nitro/vite'
 // live under `node_modules/.pnpm/`. This follows the symlinked store either way.
 const require = createRequire(import.meta.url)
 const r = (pkg: string, file: string) => join(dirname(require.resolve(pkg + '/package.json')), file)
+
+// Absolute path to this config's directory (the project root), used to mirror
+// tsconfig's `~/* -> app/*` path mapping for runtime module resolution.
+const rootDir = dirname(fileURLToPath(import.meta.url))
 
 // Force Vue's ESM (esm-bundler) builds on the server: Node/SSR resolution otherwise picks the
 // `node` export condition → CJS, which tree-shakes worse (~12KB gzip larger server bundle).
@@ -64,6 +70,14 @@ export default defineConfig((env) => ({
   optimizeDeps: {
     exclude: ['pinia'],
   },
+  resolve: {
+    alias: {
+      // Mirror tsconfig's `~/* -> app/*` so first-party imports like
+      // `~/queries/users` resolve at runtime too (the nitro SSR build does not
+      // read tsconfig path mappings).
+      '~': join(rootDir, 'app'),
+    },
+  },
   plugins: [
     //
     vueRouter({
@@ -87,6 +101,9 @@ export default defineConfig((env) => ({
       summary: true,
     }),
     patchVueExclude(vue(), /\?assets/),
+    // Nuxt UI: registers Tailwind v4, auto-imports U* components, the icon resolver,
+    // and the virtual `@nuxt/ui/vue-plugin` module installed in app/modules/ui.ts.
+    ui(),
     // clientVueRuntime(),
     devtoolsJson(),
     nitro({
@@ -106,6 +123,12 @@ export default defineConfig((env) => ({
       },
     },
     ssr: {
+      resolve: {
+        // Inline Nuxt UI so Vite's pipeline (the `ui()` plugin) resolves its
+        // internal `#imports` specifier. Left external, Node resolves the bare
+        // `#imports` import inside @nuxt/ui's runtime files and throws.
+        noExternal: ['@nuxt/ui'],
+      },
       build: {
         rolldownOptions: {
           input: './app/entry-server.ts',
@@ -131,6 +154,11 @@ export default defineConfig((env) => ({
       },
     },
     nitro: {
+      resolve: {
+        // Same as ssr: keep Nuxt UI inlined so `#imports` is resolved by Vite,
+        // not by the nitro/Node runtime (which has no `#imports` mapping).
+        noExternal: ['@nuxt/ui'],
+      },
       build: {
         rolldownOptions: {
           // To inspect the server bundle, add:

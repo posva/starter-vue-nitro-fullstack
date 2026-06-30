@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref, shallowRef } from 'vue'
+import { computed, onMounted, reactive, ref, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
+import * as z from 'zod'
+import type { FormSubmitEvent } from '@nuxt/ui'
 import { authClient } from '../lib/auth-client'
 import { useAuth } from '../lib/use-auth'
 import { SOCIAL, type SocialProvider } from '../lib/social-providers'
@@ -9,10 +11,22 @@ import { errorMessage } from '../lib/errors'
 const router = useRouter()
 const { refresh } = useAuth()
 
-// TODO: split in two pages or components
-// TODO: reuse pinia colada with mutations from account
 type Mode = 'sign-in' | 'sign-up'
 const mode = ref<Mode>('sign-in')
+
+// Schema depends on the mode: name is only collected (and required) on sign-up.
+const schema = computed(() =>
+  mode.value === 'sign-up'
+    ? z.object({
+        name: z.string().min(1, 'Name is required'),
+        email: z.email('Invalid email'),
+        password: z.string().min(8, 'Min 8 characters'),
+      })
+    : z.object({
+        email: z.email('Invalid email'),
+        password: z.string().min(8, 'Min 8 characters'),
+      }),
+)
 
 const form = reactive({ name: '', email: '', password: '' })
 const pending = ref(false)
@@ -23,7 +37,6 @@ const notice = ref<string | null>(null)
 const configured = shallowRef<string[]>([])
 onMounted(async () => {
   try {
-    // TODO: use pinia colada
     const res = await fetch('/api/auth-providers')
     configured.value = (await res.json()).providers ?? []
   } catch {
@@ -31,26 +44,33 @@ onMounted(async () => {
   }
 })
 
+function toggleMode() {
+  mode.value = mode.value === 'sign-in' ? 'sign-up' : 'sign-in'
+  error.value = notice.value = null
+}
+
 async function done() {
   await refresh()
   router.push('/account')
 }
 
-async function submitEmail() {
+async function submitEmail(
+  event: FormSubmitEvent<{ name?: string; email: string; password: string }>,
+) {
   error.value = notice.value = null
   pending.value = true
   try {
     if (mode.value === 'sign-up') {
       const { error: e } = await authClient.signUp.email({
-        name: form.name,
-        email: form.email,
-        password: form.password,
+        name: event.data.name!,
+        email: event.data.email,
+        password: event.data.password,
       })
       if (e) throw new Error(e.message)
     } else {
       const { error: e } = await authClient.signIn.email({
-        email: form.email,
-        password: form.password,
+        email: event.data.email,
+        password: event.data.password,
       })
       if (e) throw new Error(e.message)
     }
@@ -102,95 +122,101 @@ async function forgotPassword() {
 </script>
 
 <template>
-  <main>
-    <div class="card">
-      <h1>{{ mode === 'sign-in' ? 'Sign in' : 'Create account' }}</h1>
+  <div class="mx-auto max-w-sm py-4">
+    <UCard>
+      <template #header>
+        <h1 class="text-xl font-semibold text-highlighted">
+          {{ mode === 'sign-in' ? 'Sign in' : 'Create account' }}
+        </h1>
+      </template>
 
-      <div class="social">
-        <button
+      <div class="space-y-2">
+        <UButton
           v-for="p in SOCIAL"
           :key="p.id"
-          class="btn-neutral"
-          type="button"
+          block
+          color="neutral"
+          variant="subtle"
+          :icon="p.icon"
+          :label="`Continue with ${p.label}`"
           :disabled="pending"
           :title="configured.includes(p.id) ? '' : 'Not configured yet — set its env vars'"
           @click="signInWithProvider(p.id)"
         >
-          Continue with {{ p.label }}
-          <span v-if="!configured.includes(p.id)" class="badge">setup</span>
-        </button>
-        <button class="btn-neutral" type="button" :disabled="pending" @click="signInWithPasskey">
-          Continue with a passkey
-        </button>
+          <template v-if="!configured.includes(p.id)" #trailing>
+            <UBadge color="warning" variant="subtle" size="sm" label="setup" />
+          </template>
+        </UButton>
+        <UButton
+          block
+          color="neutral"
+          variant="subtle"
+          icon="i-lucide-key-round"
+          label="Continue with a passkey"
+          :disabled="pending"
+          @click="signInWithPasskey"
+        />
       </div>
 
-      <div class="divider">or</div>
+      <USeparator label="or" class="my-4" />
 
-      <form @submit.prevent="submitEmail">
-        <label v-if="mode === 'sign-up'">
-          Name
-          <input v-model="form.name" type="text" autocomplete="name" required />
-        </label>
-        <label>
-          Email
-          <input v-model="form.email" type="email" autocomplete="email" required />
-        </label>
-        <label>
-          Password
-          <input
+      <UForm :schema="schema" :state="form" class="space-y-4" @submit="submitEmail">
+        <UFormField v-if="mode === 'sign-up'" name="name" label="Name" required>
+          <UInput v-model="form.name" autocomplete="name" class="w-full" />
+        </UFormField>
+        <UFormField name="email" label="Email" required>
+          <UInput v-model="form.email" type="email" autocomplete="email" class="w-full" />
+        </UFormField>
+        <UFormField name="password" label="Password" required>
+          <template v-if="mode === 'sign-in'" #hint>
+            <UButton
+              variant="link"
+              color="neutral"
+              size="xs"
+              label="Forgot password?"
+              @click="forgotPassword"
+            />
+          </template>
+          <UInput
             v-model="form.password"
             type="password"
             :autocomplete="mode === 'sign-up' ? 'new-password' : 'current-password'"
-            required
-            minlength="8"
+            class="w-full"
           />
-        </label>
+        </UFormField>
 
-        <p v-if="error" class="error">{{ error }}</p>
-        <p v-if="notice" class="notice">{{ notice }}</p>
+        <UAlert
+          v-if="error"
+          color="error"
+          variant="subtle"
+          icon="i-lucide-circle-alert"
+          :description="error"
+        />
+        <UAlert
+          v-if="notice"
+          color="success"
+          variant="subtle"
+          icon="i-lucide-mail-check"
+          :description="notice"
+        />
 
-        <button class="button" type="submit" :disabled="pending">
-          {{ pending ? 'Please wait…' : mode === 'sign-in' ? 'Sign in' : 'Sign up' }}
-        </button>
-      </form>
+        <UButton
+          type="submit"
+          block
+          :loading="pending"
+          :label="mode === 'sign-in' ? 'Sign in' : 'Sign up'"
+        />
+      </UForm>
 
-      <div class="meta">
-        <button v-if="mode === 'sign-in'" class="link" type="button" @click="forgotPassword">
-          Forgot password?
-        </button>
-        <button
-          class="link"
-          type="button"
-          @click="mode = mode === 'sign-in' ? 'sign-up' : 'sign-in'"
-        >
-          {{ mode === 'sign-in' ? 'Need an account? Sign up' : 'Have an account? Sign in' }}
-        </button>
-      </div>
-    </div>
-  </main>
+      <template #footer>
+        <UButton
+          variant="link"
+          color="neutral"
+          class="px-0"
+          :label="mode === 'sign-in' ? 'Need an account? Sign up' : 'Have an account? Sign in'"
+          @click="toggleMode"
+        />
+      </template>
+    </UCard>
+  </div>
 </template>
-
-<style scoped>
-/* Layout only — colours/components come from the global theme (styles.css). */
-main {
-  max-width: 420px;
-  margin: 2rem auto;
-}
-
-h1 {
-  margin-bottom: 1.25rem;
-}
-
-.social,
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-.meta {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 1rem;
-}
-</style>

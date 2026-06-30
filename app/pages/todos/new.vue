@@ -1,17 +1,24 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useRouter, RouterLink } from 'vue-router'
+import { reactive } from 'vue'
+import { useRouter } from 'vue-router'
+import * as z from 'zod'
+import type { FormSubmitEvent } from '@nuxt/ui'
 import { useCreateTodo } from '~/mutations/todos'
 
 const router = useRouter()
 
-const title = ref('')
+const schema = z.object({
+  title: z.string().min(1, 'Title is required'),
+})
+type Schema = z.output<typeof schema>
+
+const state = reactive<Partial<Schema>>({ title: '' })
 
 const { mutateAsync: createTodo, asyncStatus, error } = useCreateTodo()
 
-async function submit() {
+async function onSubmit(event: FormSubmitEvent<Schema>) {
   try {
-    await createTodo({ title: title.value })
+    await createTodo(event.data)
     await router.push('/todos')
   } catch {
     // `error` is exposed reactively by the mutation.
@@ -20,48 +27,28 @@ async function submit() {
 </script>
 
 <template>
-  <main>
-    <h1>New todo</h1>
+  <div class="mx-auto max-w-md space-y-6">
+    <UPageHeader title="New todo" />
 
-    <form class="card" @submit.prevent="submit">
-      <label>
-        <span>Title</span>
-        <input v-model="title" type="text" required />
-      </label>
+    <UCard>
+      <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
+        <UFormField name="title" label="Title" required>
+          <UInput v-model="state.title" placeholder="What needs doing?" autofocus class="w-full" />
+        </UFormField>
 
-      <p v-if="error" class="error">{{ error.message }}</p>
+        <UAlert
+          v-if="error"
+          color="error"
+          variant="subtle"
+          icon="i-lucide-circle-alert"
+          :description="error.message"
+        />
 
-      <div class="actions">
-        <RouterLink to="/todos">Cancel</RouterLink>
-        <button type="submit" :disabled="asyncStatus === 'loading'">
-          {{ asyncStatus === 'loading' ? 'Creating…' : 'Create todo' }}
-        </button>
-      </div>
-    </form>
-  </main>
+        <div class="flex items-center justify-end gap-3">
+          <UButton to="/todos" label="Cancel" color="neutral" variant="ghost" />
+          <UButton type="submit" label="Create todo" :loading="asyncStatus === 'loading'" />
+        </div>
+      </UForm>
+    </UCard>
+  </div>
 </template>
-
-<style scoped>
-/* Layout only — colours/inputs come from the global theme (styles.css). */
-h1 {
-  color: var(--primary);
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-label span {
-  font-weight: 600;
-  color: var(--text);
-}
-
-.actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 1rem;
-}
-</style>
