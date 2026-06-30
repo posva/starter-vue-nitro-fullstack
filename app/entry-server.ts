@@ -81,6 +81,18 @@ function htmlTemplate(body: string): string {
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Vue Router Custom Framework</title>
+  <!-- Apply the persisted color scheme before paint so there is no light/dark
+       flash. Mirrors @vueuse/core's useDark (key 'vueuse-color-scheme', default
+       'auto' → follow the OS), which Nuxt UI's color-mode plugin then takes over. -->
+  <script>
+    (function () {
+      try {
+        var p = localStorage.getItem('vueuse-color-scheme') || 'auto'
+        var dark = p === 'dark' || (p === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches)
+        document.documentElement.classList.toggle('dark', dark)
+      } catch (e) {}
+    })()
+  </script>
 </head>
 <body>
   <div id="root">${body}</div>

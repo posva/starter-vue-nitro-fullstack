@@ -1,50 +1,61 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { computed } from 'vue'
+import { RouterView } from 'vue-router'
 import { SpeedInsights } from '@vercel/speed-insights/vue'
-import { useAuth } from './lib/use-auth'
 import { PiniaColadaDevtools } from '@pinia/colada-devtools'
-import './styles.css'
+import type { NavigationMenuItem } from '@nuxt/ui'
+import { useAuth } from './lib/use-auth'
+import ColorModeToggle from './components/ColorModeToggle.vue'
+import './assets/css/main.css'
 
 const { session, pending } = useAuth()
+
+const navItems = computed<NavigationMenuItem[]>(() => [
+  { label: 'Home', to: '/', icon: 'i-lucide-house' },
+  { label: 'Todos', to: '/todos', icon: 'i-lucide-list-checks' },
+  { label: 'Product', to: '/producs/254', icon: 'i-lucide-package' },
+  { label: 'About', to: '/about', icon: 'i-lucide-info' },
+])
 </script>
 
 <template>
-  <SpeedInsights />
+  <UApp>
+    <SpeedInsights />
+    <!-- Pinia Colada data-fetching devtools; auto-stripped from production builds. -->
+    <PiniaColadaDevtools />
 
-  <!-- Pinia Colada data-fetching devtools; auto-stripped from production builds. -->
-  <PiniaColadaDevtools />
-
-  <nav>
-    <ul>
-      <li>
-        <RouterLink to="/" exact-active-class="active">Home</RouterLink>
-      </li>
-      <li>
-        <RouterLink to="/producs/254" active-class="active" v-slot="{ href }">{{
-          href
-        }}</RouterLink>
-      </li>
-      <li>
-        <RouterLink to="/todos" active-class="active">Todos</RouterLink>
-      </li>
-      <li>
-        <RouterLink to="/about" active-class="active">About</RouterLink>
-      </li>
-      <li class="spacer" />
-      <!-- Rendered client-side once the session resolves; SSR shows nothing to avoid a flash. -->
-      <template v-if="!pending">
-        <li v-if="session">
-          <RouterLink to="/account" active-class="active">{{
-            session.user.name || 'Account'
-          }}</RouterLink>
-        </li>
-        <li v-else>
-          <RouterLink to="/login" active-class="active">Sign in</RouterLink>
-        </li>
+    <UHeader>
+      <template #title>
+        <span class="text-highlighted text-lg font-bold">Vue&nbsp;+&nbsp;Nitro</span>
       </template>
-    </ul>
-  </nav>
-  <RouterView />
-</template>
 
-<!-- Nav styling lives in the global theme (styles.css) so the shell is themeable too. -->
+      <UNavigationMenu :items="navItems" />
+
+      <template #right>
+        <ColorModeToggle />
+        <!-- Rendered client-side once the session resolves; SSR shows nothing to avoid a flash. -->
+        <template v-if="!pending">
+          <UButton
+            v-if="session"
+            :label="session.user.name || 'Account'"
+            to="/account"
+            color="neutral"
+            variant="ghost"
+            icon="i-lucide-circle-user"
+          />
+          <UButton v-else label="Sign in" to="/login" color="neutral" variant="subtle" />
+        </template>
+      </template>
+
+      <template #body>
+        <UNavigationMenu :items="navItems" orientation="vertical" class="-mx-2.5" />
+      </template>
+    </UHeader>
+
+    <UMain>
+      <UContainer class="py-8">
+        <RouterView />
+      </UContainer>
+    </UMain>
+  </UApp>
+</template>

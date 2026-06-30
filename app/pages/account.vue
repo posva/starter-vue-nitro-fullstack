@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
+import { useToast } from '@nuxt/ui/composables'
 import { authClient } from '../lib/auth-client'
 import { useAuth } from '../lib/use-auth'
 import { SOCIAL, type SocialProvider } from '../lib/social-providers'
 import { errorMessage } from '../lib/errors'
 
-// TODO: use pinia colada mutations to handle the auth state maybe?
-
 const router = useRouter()
 const { session, refresh } = useAuth()
+const toast = useToast()
 
 // Infer the row shapes straight from the client so they never drift from the API.
 type LinkedAccount = NonNullable<
@@ -22,7 +22,6 @@ type Passkey = NonNullable<
 const linked = shallowRef<LinkedAccount[]>([])
 const passkeys = shallowRef<Passkey[]>([])
 const ready = ref(false)
-const error = ref<string | null>(null)
 const busy = ref(false)
 
 // Name typed in the "add passkey" field, and inline-rename state.
@@ -45,7 +44,6 @@ async function reloadLists() {
 }
 
 async function load() {
-  error.value = null
   await refresh()
   if (!session.value) {
     router.replace('/login')
@@ -57,28 +55,32 @@ async function load() {
 
 onMounted(load)
 
-// Wrap a mutating action: clear errors, toggle `busy`, refresh the lists, and
-// surface any failure. `fn` should throw (or return a `{ error }`) on failure.
+// Wrap a mutating action: toggle `busy`, refresh the lists, and surface any
+// failure as a toast. `fn` should throw (or return a `{ error }`) on failure.
 async function run(fn: () => Promise<unknown>, fallback: string) {
-  error.value = null
   busy.value = true
   try {
     const res = (await fn()) as { error?: { message?: string | null } | null } | void
     if (res?.error) throw new Error(res.error.message ?? undefined)
     await reloadLists()
   } catch (e) {
-    error.value = errorMessage(e, fallback)
+    toast.add({ title: fallback, description: errorMessage(e, fallback), color: 'error' })
   } finally {
     busy.value = false
   }
 }
 
 async function link(provider: SocialProvider) {
-  error.value = null
   // Redirects into the OAuth flow; auto-links to this account on return because
   // the email matches (account linking is enabled server-side). No reload needed.
   return authClient.linkSocial({ provider, callbackURL: '/account' }).then(({ error: e }) => {
-    if (e) error.value = e.message ?? `Could not link ${provider}`
+    if (e) {
+      toast.add({
+        title: `Could not link ${provider}`,
+        color: 'error',
+        ...(e.message ? { description: e.message } : {}),
+      })
+    }
   })
 }
 
@@ -128,168 +130,156 @@ async function logout() {
 </script>
 
 <template>
-  <main>
-    <div v-if="!ready" class="card"><p>Loading…</p></div>
+  <div class="mx-auto max-w-2xl space-y-6">
+    <div v-if="!ready" class="space-y-4">
+      <USkeleton class="h-8 w-40" />
+      <USkeleton class="h-32 w-full" />
+    </div>
 
     <template v-else-if="session">
-      <div class="header">
-        <h1>Account</h1>
-        <button class="button ghost" :disabled="busy" @click="logout">Sign out</button>
-      </div>
+      <UPageHeader title="Account">
+        <template #links>
+          <UButton
+            label="Sign out"
+            icon="i-lucide-log-out"
+            color="neutral"
+            variant="subtle"
+            :disabled="busy"
+            @click="logout"
+          />
+        </template>
+      </UPageHeader>
 
-      <div class="card">
-        <h2>Profile</h2>
-        <p><strong>Name:</strong> {{ session.user.name }}</p>
-        <p><strong>Email:</strong> {{ session.user.email }}</p>
-        <p>
-          <strong>Email verified:</strong>
-          {{ session.user.emailVerified ? 'yes' : 'no' }}
-        </p>
-      </div>
+      <UCard>
+        <template #header>
+          <h2 class="font-semibold text-highlighted">Profile</h2>
+        </template>
+        <dl class="space-y-2 text-sm">
+          <div class="flex gap-2">
+            <dt class="w-32 text-muted">Name</dt>
+            <dd>{{ session.user.name }}</dd>
+          </div>
+          <div class="flex gap-2">
+            <dt class="w-32 text-muted">Email</dt>
+            <dd>{{ session.user.email }}</dd>
+          </div>
+          <div class="flex items-center gap-2">
+            <dt class="w-32 text-muted">Email verified</dt>
+            <dd>
+              <UBadge
+                :color="session.user.emailVerified ? 'success' : 'neutral'"
+                variant="subtle"
+                :label="session.user.emailVerified ? 'Verified' : 'Not verified'"
+              />
+            </dd>
+          </div>
+        </dl>
+      </UCard>
 
-      <div class="card">
-        <h2>Connected providers</h2>
-        <p class="hint">
+      <UCard>
+        <template #header>
+          <h2 class="font-semibold text-highlighted">Connected providers</h2>
+        </template>
+        <p class="mb-3 text-sm text-muted">
           Sign in with any provider sharing this email and it links here automatically.
         </p>
-        <ul class="list">
-          <li v-for="p in SOCIAL" :key="p.id">
-            <span>{{ p.label }}</span>
+        <ul class="divide-y divide-default">
+          <li v-for="p in SOCIAL" :key="p.id" class="flex items-center gap-3 py-2.5">
+            <UIcon :name="p.icon" class="size-5 shrink-0" />
+            <span class="flex-1">{{ p.label }}</span>
             <template v-if="linkedByProvider.get(p.id)">
-              <span class="tag">linked</span>
-              <button
-                class="link"
+              <UBadge color="success" variant="subtle" label="Linked" />
+              <UButton
+                label="Unlink"
+                color="error"
+                variant="ghost"
+                size="sm"
                 :disabled="busy"
                 @click="unlink(p.id, linkedByProvider.get(p.id)!.accountId)"
-              >
-                Unlink
-              </button>
+              />
             </template>
-            <button v-else class="link" :disabled="busy" @click="link(p.id)">Connect</button>
+            <UButton
+              v-else
+              label="Connect"
+              color="neutral"
+              variant="subtle"
+              size="sm"
+              :disabled="busy"
+              @click="link(p.id)"
+            />
           </li>
         </ul>
-      </div>
+      </UCard>
 
-      <div class="card">
-        <h2>Passkeys</h2>
-        <form class="add-passkey" @submit.prevent="addPasskey">
-          <input
+      <UCard>
+        <template #header>
+          <h2 class="font-semibold text-highlighted">Passkeys</h2>
+        </template>
+
+        <form class="mb-4 flex gap-2" @submit.prevent="addPasskey">
+          <UInput
             v-model="newPasskeyName"
-            type="text"
             placeholder="Passkey name (e.g. MacBook Touch ID)"
+            class="flex-1"
             :disabled="busy"
           />
-          <button class="button" type="submit" :disabled="busy">Add passkey</button>
+          <UButton type="submit" label="Add passkey" icon="i-lucide-key-round" :disabled="busy" />
         </form>
 
-        <p v-if="!passkeys.length" class="hint">No passkeys yet.</p>
-        <ul v-else class="list">
-          <li v-for="key in passkeys" :key="key.id">
-            <!-- Inline rename -->
+        <p v-if="!passkeys.length" class="text-sm text-muted">No passkeys yet.</p>
+        <ul v-else class="divide-y divide-default">
+          <li v-for="key in passkeys" :key="key.id" class="flex items-center gap-3 py-2.5">
             <template v-if="editingId === key.id">
-              <input
+              <UInput
                 v-model="editName"
-                class="rename-input"
-                type="text"
+                class="flex-1"
                 :disabled="busy"
+                autofocus
                 @keyup.enter="saveRename(key.id)"
                 @keyup.esc="cancelRename"
               />
-              <button class="link" :disabled="busy || !editName.trim()" @click="saveRename(key.id)">
-                Save
-              </button>
-              <button class="link" :disabled="busy" @click="cancelRename">Cancel</button>
+              <UButton
+                label="Save"
+                size="sm"
+                :disabled="busy || !editName.trim()"
+                @click="saveRename(key.id)"
+              />
+              <UButton
+                label="Cancel"
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                :disabled="busy"
+                @click="cancelRename"
+              />
             </template>
-            <!-- Default row -->
             <template v-else>
-              <span>{{ key.name || 'Passkey' }}</span>
-              <span class="muted">{{
-                key.createdAt ? new Date(key.createdAt).toLocaleString() : ''
-              }}</span>
-              <button class="link" :disabled="busy" @click="startRename(key)">Rename</button>
-              <button class="link" :disabled="busy" @click="deletePasskey(key.id)">Delete</button>
+              <span class="flex-1">{{ key.name || 'Passkey' }}</span>
+              <span class="text-sm text-muted">
+                {{ key.createdAt ? new Date(key.createdAt).toLocaleString() : '' }}
+              </span>
+              <UButton
+                icon="i-lucide-pencil"
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                aria-label="Rename passkey"
+                :disabled="busy"
+                @click="startRename(key)"
+              />
+              <UButton
+                icon="i-lucide-trash-2"
+                color="error"
+                variant="ghost"
+                size="sm"
+                aria-label="Delete passkey"
+                :disabled="busy"
+                @click="deletePasskey(key.id)"
+              />
             </template>
           </li>
         </ul>
-      </div>
-
-      <p v-if="error" class="error">{{ error }}</p>
+      </UCard>
     </template>
-  </main>
+  </div>
 </template>
-
-<style scoped>
-/* Layout only — colours/components come from the global theme (styles.css). */
-main {
-  max-width: 640px;
-  margin: 2rem auto;
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-}
-
-h1 {
-  margin: 0;
-}
-
-h2 {
-  margin: 0 0 0.75rem;
-  font-size: 1.1rem;
-}
-
-.card {
-  margin-bottom: 1rem;
-}
-
-.card .header {
-  margin-bottom: 0.5rem;
-}
-
-.hint {
-  margin: 0 0 0.5rem;
-}
-
-.add-passkey {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.add-passkey input {
-  flex: 1;
-}
-
-.add-passkey .button {
-  flex-shrink: 0;
-}
-
-.rename-input {
-  flex: 1;
-}
-
-.list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.list li {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.list li:last-child {
-  border-bottom: none;
-}
-
-.list li > span:first-child {
-  flex: 1;
-}
-</style>

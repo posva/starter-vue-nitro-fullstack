@@ -59,13 +59,6 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/colada': RouteRecordInfo<
-      '/colada',
-      '/colada',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
     '/login': RouteRecordInfo<
       '/login',
       '/login',
@@ -87,16 +80,16 @@ declare module 'vue-router/auto-routes' {
       { token: string },
       | never
     >,
-    '/users/': RouteRecordInfo<
-      '/users/',
-      '/users',
+    '/todos/': RouteRecordInfo<
+      '/todos/',
+      '/todos',
       Record<never, never>,
       Record<never, never>,
       | never
     >,
-    '/users/new': RouteRecordInfo<
-      '/users/new',
-      '/users/new',
+    '/todos/new': RouteRecordInfo<
+      '/todos/new',
+      '/todos/new',
       Record<never, never>,
       Record<never, never>,
       | never
@@ -146,14 +139,6 @@ declare module 'vue-router/auto-routes' {
       pathParamNames:
         | never
     }
-    'app/pages/colada.vue': {
-      routes:
-        | '/colada'
-      views:
-        | never
-      pathParamNames:
-        | never
-    }
     'app/pages/login.vue': {
       routes:
         | '/login'
@@ -178,17 +163,17 @@ declare module 'vue-router/auto-routes' {
       pathParamNames:
         | never
     }
-    'app/pages/users/index.vue': {
+    'app/pages/todos/index.vue': {
       routes:
-        | '/users/'
+        | '/todos/'
       views:
         | never
       pathParamNames:
         | never
     }
-    'app/pages/users/new.vue': {
+    'app/pages/todos/new.vue': {
       routes:
-        | '/users/new'
+        | '/todos/new'
       views:
         | never
       pathParamNames:
