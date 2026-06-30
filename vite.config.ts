@@ -6,6 +6,7 @@ import vue, { type Api } from '@vitejs/plugin-vue'
 import ui from '@nuxt/ui/vite'
 import vueRouter from 'vue-router/vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
+import { DevTools } from '@vitejs/devtools'
 import bundleAnalyzer from 'vite-bundle-analyzer'
 import { nitro } from 'nitro/vite'
 
@@ -106,6 +107,9 @@ export default defineConfig((env) => ({
     ui(),
     // clientVueRuntime(),
     devtoolsJson(),
+    // Vite DevTools (https://devtools.vite.dev) — dev-only floating panel. Returns a
+    // Promise<Plugin[]>, which Vite awaits and flattens inline; `false` is ignored.
+    env.command === 'serve' && DevTools(),
     nitro({
       serverDir: './server',
       // alias: env.command === 'build' ? vueServerAliases : {},
@@ -118,6 +122,7 @@ export default defineConfig((env) => ({
     client: {
       build: {
         rolldownOptions: {
+          devtools: {},
           input: './app/entry-client.ts',
         },
       },
