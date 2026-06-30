@@ -28,6 +28,7 @@
     "@pinia/colada-devtools": "^1.1.0",
     "@typescript/native-preview": "7.0.0-dev.20260604.1",
     "@vercel/speed-insights": "^2.0.0",
+    "@vitejs/devtools": "^0.3.3",
     "@vitejs/plugin-vue": "^6.0.5",
     "@vue/tsconfig": "^0.9.1",
     "drizzle-kit": "^0.31.10",
