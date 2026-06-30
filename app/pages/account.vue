@@ -1,4 +1,11 @@
 <script setup lang="ts">
+import UBadge from '@nuxt/ui/components/Badge.vue'
+import UButton from '@nuxt/ui/components/Button.vue'
+import UCard from '@nuxt/ui/components/Card.vue'
+import UIcon from '@nuxt/ui/runtime/vue/components/Icon.vue'
+import UInput from '@nuxt/ui/components/Input.vue'
+import UPageHeader from '@nuxt/ui/components/PageHeader.vue'
+import USkeleton from '@nuxt/ui/components/Skeleton.vue'
 import { computed, onMounted, ref, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
 import { useToast } from '@nuxt/ui/composables'

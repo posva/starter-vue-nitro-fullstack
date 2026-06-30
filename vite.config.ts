@@ -101,9 +101,14 @@ export default defineConfig((env) => ({
       summary: true,
     }),
     patchVueExclude(vue(), /\?assets/),
-    // Nuxt UI: registers Tailwind v4, auto-imports U* components, the icon resolver,
-    // and the virtual `@nuxt/ui/vue-plugin` module installed in app/modules/ui.ts.
-    ui(),
+    // Nuxt UI: registers Tailwind v4, the icon resolver, and the virtual
+    // `@nuxt/ui/vue-plugin` module installed in app/modules/ui.ts.
+    // Auto-import is disabled — components are imported explicitly from
+    // `@nuxt/ui/components/*.vue` and composables from `@nuxt/ui/composables`.
+    // NOTE: `UIcon`/`ULink` must be imported from `@nuxt/ui/runtime/vue/components/*`
+    // (the Vue-compatible overrides). The plain `components/Icon.vue` pulls in
+    // `@nuxt/icon`'s `svg.js`, which imports Nuxt-only helpers from `#imports`.
+    ui({ autoImport: false, components: false }),
     // clientVueRuntime(),
     devtoolsJson(),
     nitro({
