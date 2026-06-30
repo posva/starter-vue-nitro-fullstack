@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import UButton from '@nuxt/ui/components/Button.vue'
+import UKbd from '@nuxt/ui/components/Kbd.vue'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 

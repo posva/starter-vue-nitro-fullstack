@@ -1,4 +1,11 @@
 <script setup lang="ts">
+import UAlert from '@nuxt/ui/components/Alert.vue'
+import UBadge from '@nuxt/ui/components/Badge.vue'
+import UButton from '@nuxt/ui/components/Button.vue'
+import UCard from '@nuxt/ui/components/Card.vue'
+import UIcon from '@nuxt/ui/runtime/vue/components/Icon.vue'
+import UPageHeader from '@nuxt/ui/components/PageHeader.vue'
+import UTable from '@nuxt/ui/components/Table.vue'
 import { useQuery } from '@pinia/colada'
 import type { TableColumn } from '@nuxt/ui'
 import { todoListQuery, type Todo } from '~/queries/todos'

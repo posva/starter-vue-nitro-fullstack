@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import UApp from '@nuxt/ui/components/App.vue'
+import UButton from '@nuxt/ui/components/Button.vue'
+import UContainer from '@nuxt/ui/components/Container.vue'
+import UHeader from '@nuxt/ui/components/Header.vue'
+import UMain from '@nuxt/ui/components/Main.vue'
+import UNavigationMenu from '@nuxt/ui/components/NavigationMenu.vue'
 import { computed } from 'vue'
 import { RouterView } from 'vue-router'
 import { SpeedInsights } from '@vercel/speed-insights/vue'

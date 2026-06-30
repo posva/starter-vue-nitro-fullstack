@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import UButton from '@nuxt/ui/components/Button.vue'
+import UCard from '@nuxt/ui/components/Card.vue'
 import { ref } from 'vue'
 
 const count = ref(0)
