@@ -1,3 +1,8 @@
+<script setup lang="ts">
+import UCard from '@nuxt/ui/components/Card.vue'
+import UPageHeader from '@nuxt/ui/components/PageHeader.vue'
+</script>
+
 <template>
   <div class="mx-auto max-w-2xl space-y-6">
     <UPageHeader

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import UButton from '@nuxt/ui/components/Button.vue'
 import { onMounted, ref } from 'vue'
 import { useDark, useToggle } from '@vueuse/core'
 

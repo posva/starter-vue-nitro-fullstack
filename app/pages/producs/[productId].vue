@@ -1,4 +1,7 @@
 <script lang="ts" setup>
+import UBadge from '@nuxt/ui/components/Badge.vue'
+import UCard from '@nuxt/ui/components/Card.vue'
+import UPageHeader from '@nuxt/ui/components/PageHeader.vue'
 import { useRoute } from 'vue-router'
 
 const route = useRoute()
