@@ -113,6 +113,7 @@ export default defineConfig((env) => ({
         // automatically applies db migrations during dev
         env.mode === 'development' ? ['./server/database/dev-migration-plugin.ts'] : [],
     }),
+    noSsrCssEmit(),
   ],
   environments: {
     client: {
@@ -191,6 +192,23 @@ function clientVueRuntime(): Plugin {
     // runs, so match the resolved path (not the `vue` specifier) and swap it.
     resolveId(id) {
       if ((id === 'vue' || id === full) && this.environment?.name === 'client') return runtime
+      return undefined
+    },
+  }
+}
+
+// Nitro's fullstack:assets plugin forces `emitAssets: true` on the ssr
+// environment to back plain `?assets` imports (SSR-graph assets). This app
+// only uses `?assets=client`, so that emission is pure waste: the SSR build
+// writes a byte-identical copy of the client CSS that nitro then publishes
+// into public/ (double file, and it double-downloaded before entry-server
+// switched to `?assets=client`). Must run AFTER nitro() so this
+// configEnvironment merge wins.
+function noSsrCssEmit(): Plugin {
+  return {
+    name: 'no-ssr-css-emit',
+    configEnvironment(name) {
+      if (name === 'ssr') return { build: { emitAssets: false } }
       return undefined
     },
   }

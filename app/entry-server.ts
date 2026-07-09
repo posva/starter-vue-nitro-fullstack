@@ -12,7 +12,10 @@ import clientAssets from './entry-client.ts?assets=client'
 import { InitialStateServer } from './initial-state.ts'
 import { inlineCriticalCss } from './lib/critical-css.ts'
 
-const assetsModules = import.meta.glob('./pages/**/*.vue', { query: '?assets' })
+// `?assets=client` resolves against the client build graph. Plain `?assets`
+// would resolve against the SSR graph, whose emitted CSS duplicates the
+// client stylesheet byte-for-byte under a different name → double download.
+const assetsModules = import.meta.glob('./pages/**/*.vue', { query: '?assets=client' })
 
 async function handler(request: Request): Promise<Response> {
   const app = createSSRApp(App)
@@ -44,7 +47,7 @@ async function handler(request: Request): Promise<Response> {
   await router.isReady()
 
   const assets = clientAssets.merge(
-    (await import('./app.vue?assets')).default,
+    (await import('./app.vue?assets=client')).default,
     ...(await Promise.all(
       router.currentRoute.value.matched
         .map((to) => to.meta.assetsKey)
