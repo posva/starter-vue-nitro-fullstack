@@ -7,9 +7,15 @@ import { authClient } from '../lib/auth-client'
 import { useAuth } from '../lib/use-auth'
 import { SOCIAL, type SocialProvider } from '../lib/social-providers'
 import { errorMessage } from '../lib/errors'
+import { useSeoMeta } from '@unhead/vue'
 
 const router = useRouter()
 const { refresh } = useAuth()
+
+useSeoMeta({
+  title: 'Sign in',
+  robots: 'noindex',
+})
 
 type Mode = 'sign-in' | 'sign-up'
 const mode = ref<Mode>('sign-in')

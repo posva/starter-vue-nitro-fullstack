@@ -6,10 +6,16 @@ import { authClient } from '../lib/auth-client'
 import { useAuth } from '../lib/use-auth'
 import { SOCIAL, type SocialProvider } from '../lib/social-providers'
 import { errorMessage } from '../lib/errors'
+import { useSeoMeta } from '@unhead/vue'
 
 const router = useRouter()
 const { session, refresh } = useAuth()
 const toast = useToast()
+
+useSeoMeta({
+  title: 'Account',
+  robots: 'noindex, nofollow', // private page
+})
 
 // Infer the row shapes straight from the client so they never drift from the API.
 type LinkedAccount = NonNullable<

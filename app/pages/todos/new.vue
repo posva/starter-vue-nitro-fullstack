@@ -3,7 +3,10 @@ import { reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import * as z from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
+import { useSeoMeta } from '@unhead/vue'
 import { useCreateTodo } from '~/mutations/todos'
+
+useSeoMeta({ title: 'New todo' })
 
 const router = useRouter()
 

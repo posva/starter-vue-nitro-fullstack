@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useSeoMeta } from '@unhead/vue'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 
@@ -6,6 +7,11 @@ const route = useRoute()
 const path = computed(() => {
   const p = route.params.path
   return '/' + (Array.isArray(p) ? p.join('/') : (p ?? ''))
+})
+
+useSeoMeta({
+  title: 'Page not found',
+  robots: 'noindex',
 })
 </script>
 

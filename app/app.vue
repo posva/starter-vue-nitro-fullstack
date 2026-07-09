@@ -7,6 +7,7 @@ import type { NavigationMenuItem } from '@nuxt/ui'
 import { useAuth } from './lib/use-auth'
 import ColorModeToggle from './components/ColorModeToggle.vue'
 import './assets/css/main.css'
+import { useHead, useSeoMeta } from '@unhead/vue'
 
 const { session, pending } = useAuth()
 
@@ -16,6 +17,24 @@ const navItems = computed<NavigationMenuItem[]>(() => [
   { label: 'Product', to: '/producs/254', icon: 'i-lucide-package' },
   { label: 'About', to: '/about', icon: 'i-lucide-info' },
 ])
+
+const SITE_NAME = 'Vue + Nitro'
+
+// Site-wide head defaults; pages override with their own useHead/useSeoMeta.
+useHead({
+  title: 'Fullstack starter',
+  // Function template needs no plugin; pages reset it with `titleTemplate: null`.
+  titleTemplate: (title) => (title ? `${title} · ${SITE_NAME}` : SITE_NAME),
+  htmlAttrs: { lang: 'en' },
+})
+
+useSeoMeta({
+  description: 'Vue + Nitro fullstack starter with SSR, auth, and a typed data layer.',
+  ogType: 'website',
+  ogSiteName: SITE_NAME,
+  twitterCard: 'summary_large_image',
+  // ogImage: 'https://example.com/og.png', // absolute URL
+})
 </script>
 
 <template>

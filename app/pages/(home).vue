@@ -1,5 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useSeoMeta } from '@unhead/vue'
+
+// Brand-only title on the landing page.
+useSeoMeta({
+  title: 'Vue + Nitro',
+  titleTemplate: null,
+  description:
+    'A fullstack Vue starter with Vite SSR, a Nitro server, authentication, and a typed data layer.',
+})
 
 const count = ref(0)
 

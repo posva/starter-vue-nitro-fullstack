@@ -5,6 +5,12 @@ import * as z from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { authClient } from '../lib/auth-client'
 import { errorMessage } from '../lib/errors'
+import { useSeoMeta } from '@unhead/vue'
+
+useSeoMeta({
+  title: 'Reset password',
+  robots: 'noindex',
+})
 
 const route = useRoute()
 const router = useRouter()

@@ -2,7 +2,7 @@
 import { createSSRApp } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 import { createMemoryHistory, RouterLink, RouterView } from 'vue-router'
-import { createHead, transformHtmlTemplate } from 'unhead/server'
+import { createHead, transformHtmlTemplate } from '@unhead/vue/server'
 
 import App from './app.vue'
 import { createAppRouter } from './router.ts'
@@ -19,6 +19,11 @@ async function handler(request: Request): Promise<Response> {
   app.component('RouterLink', RouterLink)
   app.component('RouterView', RouterView)
   app.use(router)
+
+  // Install the head BEFORE modules so Nuxt UI reuses it (it only creates its own
+  // client head when `usehead` isn't provided yet) and component tags reach SSR.
+  const head = createHead()
+  app.use(head)
 
   const initialState = new InitialStateServer()
   const { onRendered, runRendered } = createRenderedHook()
@@ -46,8 +51,6 @@ async function handler(request: Request): Promise<Response> {
         .map((key) => assetsModules[key]?.().then((m: any) => m.default)),
     )),
   )
-
-  const head = createHead()
 
   head.push({
     link: [
@@ -80,7 +83,7 @@ function htmlTemplate(body: string): string {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Vue Router Custom Framework</title>
+  <title>Vue + Nitro</title>
   <!-- Apply the persisted color scheme before paint so there is no light/dark
        flash. Mirrors @vueuse/core's useDark (key 'vueuse-color-scheme', default
        'auto' → follow the OS), which Nuxt UI's color-mode plugin then takes over. -->
