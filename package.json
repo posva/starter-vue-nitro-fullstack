@@ -30,6 +30,7 @@
     "@vercel/speed-insights": "^2.0.0",
     "@vitejs/plugin-vue": "^6.0.5",
     "@vue/tsconfig": "^0.9.1",
+    "beasties": "^0.4.2",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
     "nitro": "latest",

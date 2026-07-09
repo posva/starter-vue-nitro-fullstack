@@ -17,6 +17,11 @@ useSeoMeta({
   robots: 'noindex, nofollow', // private page
 })
 
+definePage({
+  // private page: TTFB beats first-paint, skip critical CSS inlining
+  meta: { criticalCss: false },
+})
+
 // Infer the row shapes straight from the client so they never drift from the API.
 type LinkedAccount = NonNullable<
   Awaited<ReturnType<typeof authClient.listAccounts>>['data']

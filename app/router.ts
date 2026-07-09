@@ -20,5 +20,7 @@ declare module 'vue-router' {
   interface RouteMeta {
     // serializable key used to resolve the route's `?assets` module during SSR
     assetsKey?: string
+    // false skips critical CSS inlining (~20ms of SSR time per request)
+    criticalCss?: boolean
   }
 }

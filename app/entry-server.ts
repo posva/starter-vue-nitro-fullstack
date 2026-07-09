@@ -10,6 +10,7 @@ import { installModules, createRenderedHook } from './modules'
 
 import clientAssets from './entry-client.ts?assets=client'
 import { InitialStateServer } from './initial-state.ts'
+import { inlineCriticalCss } from './lib/critical-css.ts'
 
 const assetsModules = import.meta.glob('./pages/**/*.vue', { query: '?assets' })
 
@@ -70,7 +71,16 @@ async function handler(request: Request): Promise<Response> {
     script: [{ innerHTML: `window.__INITIAL_STATE__=${initialState}` }],
   })
 
-  const html = await transformHtmlTemplate(head, htmlTemplate(renderedApp))
+  let html = await transformHtmlTemplate(head, htmlTemplate(renderedApp))
+
+  // Skipped in dev (styles go through Vite's module graph, no links to inline).
+  // Pages can opt out via `definePage({ meta: { criticalCss: false } })`.
+  const criticalCss = !router.currentRoute.value.matched.some(
+    (record) => record.meta.criticalCss === false,
+  )
+  if (!import.meta.env.DEV && criticalCss) {
+    html = await inlineCriticalCss(html, url.origin)
+  }
 
   return new Response(html, {
     headers: { 'Content-Type': 'text/html;charset=utf-8' },
