@@ -1,7 +1,6 @@
 import { betterAuth, type BetterAuthOptions } from 'better-auth'
-import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { passkey } from '@better-auth/passkey'
-import { useDrizzle, tables } from './drizzle'
+import { useAuthDatabase } from './db'
 import { sendEmail, isEmailConfigured } from './email'
 
 export type Auth = ReturnType<typeof betterAuth>
@@ -11,22 +10,22 @@ let _auth: Auth | undefined
 /**
  * Lazily build (and cache) the Better Auth instance.
  *
- * The drizzle adapter needs a concrete db handle, but `useDrizzle()` is async
- * (it dynamically imports PGlite or Neon on first use), so the auth instance is
- * created on first request and memoized for the rest of the process lifetime.
+ * Better Auth needs a concrete database handle, but `useAuthDatabase()` is
+ * async (it dynamically imports PGlite or pg on first use), so the auth
+ * instance is created on first request and memoized for the rest of the
+ * process lifetime.
  */
 export async function useAuth(): Promise<Auth> {
   if (_auth) return _auth
-  const db = await useDrizzle()
-  _auth = betterAuth(authOptions(db))
+  _auth = betterAuth(authOptions(await useAuthDatabase()))
   return _auth
 }
 
-// Accept any Drizzle DB the adapter supports (Neon in prod, PGlite in dev/tests)
-// rather than pinning to one backend's type.
-type DrizzleDB = Parameters<typeof drizzleAdapter>[0]
-
-export function authOptions(db: DrizzleDB): BetterAuthOptions {
+// A pg Pool in prod, a Kysely dialect over PGlite in dev/tests — either way
+// Better Auth runs it through its built-in Kysely adapter.
+export function authOptions(
+  database: NonNullable<BetterAuthOptions['database']>,
+): BetterAuthOptions {
   // Single source of truth for the public origin, in priority order:
   //   1. BETTER_AUTH_URL — explicit (set this for a stable production domain)
   //   2. VERCEL_URL — auto-injected per deployment, so previews work out of the box
@@ -104,16 +103,7 @@ export function authOptions(db: DrizzleDB): BetterAuthOptions {
       return []
     },
 
-    database: drizzleAdapter(db, {
-      provider: 'pg',
-      schema: {
-        user: tables.user,
-        session: tables.session,
-        account: tables.account,
-        verification: tables.verification,
-        passkey: tables.passkey,
-      },
-    }),
+    database,
 
     emailAndPassword: {
       enabled: true,
