@@ -42,7 +42,7 @@ where `<origin>` is `BETTER_AUTH_URL` in production and the live preview URL on 
 
 ## Deploying to Vercel
 
-Connect the repo to a Vercel project, then do the steps below. The build command (`vercel.json`) is `pnpm db:migrate && pnpm build`, so migrations run against `DATABASE_URL` on every deploy.
+Connect the repo to a Vercel project, then do the steps below. Set the **Build Command** in Project Settings → Build and Deployment to `pnpm db:migrate && pnpm build`, so migrations run against `DATABASE_URL` before every deploy's build.
 
 > Most of the work is **installing the Neon integration** — it provisions the database variables for you. Everything else is a handful of secrets you set by hand. Local `.env` files are never uploaded, so all of this lives on the Vercel project. Environment variable changes only take effect on the **next deployment**, so redeploy after changing them.
 
