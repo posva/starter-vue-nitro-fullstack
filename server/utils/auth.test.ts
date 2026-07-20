@@ -65,9 +65,9 @@ test('valid credentials sign in, wrong password is rejected', async () => {
   ).rejects.toThrow()
 
   // Sign-up logs the unsent verification email; the rejected sign-in is logged
-  // by Better Auth as an error.
+  // by Better Auth as a warning.
   expect('[email] not sent').toHaveBeenWarned()
-  expect('Invalid password').toHaveBeenErrored()
+  expect('Invalid password').toHaveBeenWarned()
 })
 
 test('signing in via a trusted provider links to the existing email account', async () => {
