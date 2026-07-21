@@ -21,7 +21,7 @@ Each deployment migrates its own branch, so the build command just runs the migr
 pnpm db:migrate && pnpm build
 ```
 
-(set in `vercel.json` / Vercel → Settings → Build and Deployment)
+(set in Vercel → Settings → Build and Deployment)
 
 - **Preview** deploys migrate their own branch — so you can test a migration in isolation before merging.
 - **Production** deploys migrate that deployment's branch.

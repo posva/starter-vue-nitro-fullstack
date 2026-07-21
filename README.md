@@ -48,7 +48,7 @@ Connect the repo to a Vercel project, then do the steps below. Set the **Build C
 
 ### 1. Database — install the Neon integration
 
-This is the real database setup: the integration provisions `DATABASE_URL` (plus the `POSTGRES_*` / `PG*` / `NEON_*` variables) on the project automatically.
+This is the real database setup: the integration provisions `DATABASE_URL` (plus the `POSTGRES_*` / `PG*` / `NEON_*` variables) on the project automatically. For the database stack, migrations, and per-deployment branches, see [`docs/database/`](./docs/database/00.init-db.md).
 
 ```bash
 vercel install neon
@@ -135,3 +135,5 @@ Auth works on previews with no extra URL config: the app resolves its public ori
 To enable it, add the same secrets to the **Preview** environment as you did for Production in the steps above (the commands include the `preview` variants), with one rule: **never set `BETTER_AUTH_URL` on Preview** — that's what triggers per-request resolution. For Sign in with Vercel, the project-selected callback already covers every preview domain.
 
 Two caveats: previews have **Deployment Protection** on by default (only your team can reach them), and a custom preview domain Vercel doesn't inject as an env var would need its own `BETTER_AUTH_URL`.
+
+For per-deployment **database** branches and instant rollback, see [`docs/database/previews-and-rollback.md`](./docs/database/previews-and-rollback.md).
