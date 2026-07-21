@@ -1,6 +1,6 @@
 import { defineHandler, HTTPError } from 'nitro'
 import { readBody } from 'nitro/h3'
-import { useDrizzle, tables } from '../utils/drizzle'
+import { useDb, type Todo } from '../utils/db'
 import { useAuth } from '../utils/auth'
 
 // POST /api/todos { title } -> create a todo, tagged with the signed-in user
@@ -15,10 +15,10 @@ export default defineHandler(async (event) => {
   const auth = await useAuth()
   const session = await auth.api.getSession({ headers: event.headers })
 
-  const db = await useDrizzle()
-  const [todo] = await db
-    .insert(tables.todos)
-    .values({ title, userId: session?.user.id ?? null })
-    .returning()
-  return todo
+  const db = await useDb()
+  const { rows } = await db.sql<{ rows: Todo[] }>`
+    INSERT INTO "todos" ("title", "userId")
+    VALUES (${title}, ${session?.user.id ?? null})
+    RETURNING *`
+  return rows[0]
 })

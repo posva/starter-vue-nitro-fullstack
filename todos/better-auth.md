@@ -14,9 +14,9 @@ roughly ordered by importance.
   them with an email that already exists links to that account instead of
   duplicating it.
 - Catch-all handler at `/api/auth/*`, lazy/memoized auth instance over the
-  existing Drizzle (PGlite dev / Neon prod) setup.
-- Drizzle schema + migration for `user`, `session`, `account`, `verification`,
-  `passkey`.
+  db-per-env setup (PGlite dev / `pg` Pool on `DATABASE_URL` prod) via Better
+  Auth's built-in Kysely adapter.
+- SQL migrations for `user`, `session`, `account`, `verification`, `passkey`.
 - Integration test (`server/utils/auth.test.ts`) covering the real schema +
   adapter + email/password flow against in-memory PGlite.
 

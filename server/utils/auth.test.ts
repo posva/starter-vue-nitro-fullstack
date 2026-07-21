@@ -1,30 +1,31 @@
 import { test, expect, beforeAll } from 'vitest'
-import { resolve } from 'node:path'
 import { mockConsoleWarn, mockConsoleError } from '../../test/mock-warn'
-import { PGlite } from '@electric-sql/pglite'
-import { drizzle } from 'drizzle-orm/pglite'
-import { migrate } from 'drizzle-orm/pglite/migrator'
+import { createDatabase, type Database } from 'db0'
+import pglite from 'db0/connectors/pglite'
+import type { PGlite } from '@electric-sql/pglite'
+import { pgliteDialect } from './pglite-dialect'
 import { betterAuth } from 'better-auth'
 import { handleOAuthUserInfo } from 'better-auth/oauth2'
-import { eq } from 'drizzle-orm'
-import * as schema from '../database/schema'
+import { runMigrations } from '../database/migrate'
 import { authOptions } from './auth'
 
-// End-to-end check of the real server auth stack: the hand-written Drizzle
-// schema, the Better Auth drizzle adapter mapping, password hashing and the
-// account model — all wired exactly as production uses them, but against an
-// in-memory PGlite. If a schema field name drifts from what Better Auth
-// expects (the most common integration break), these fail.
+// End-to-end check of the real server auth stack: the SQL migrations, the
+// Better Auth Kysely adapter (over PGlite, wired exactly like dev — one shared
+// PGlite instance behind db0), password hashing and the account model. If a
+// column name drifts from what Better Auth expects (the most common
+// integration break since the schema is hand-written SQL), these fail.
 let auth: ReturnType<typeof betterAuth>
-let db: ReturnType<typeof drizzle<typeof schema>>
+let db: Database
 
 mockConsoleWarn()
 mockConsoleError()
 
 beforeAll(async () => {
-  db = drizzle(new PGlite(), { schema })
-  await migrate(db, { migrationsFolder: resolve(process.cwd(), 'server/database/migrations') })
-  auth = betterAuth(authOptions(db))
+  db = createDatabase(pglite({}))
+  await runMigrations(db)
+  // `db` is typed as the generic `Database`, which erases the instance type.
+  const dialect = pgliteDialect((await db.getInstance()) as PGlite)
+  auth = betterAuth(authOptions({ dialect, type: 'postgres' }))
 })
 
 test('email + password sign-up creates a user with a credential account', async () => {
@@ -34,16 +35,15 @@ test('email + password sign-up creates a user with a credential account', async 
   expect(res.user.email).toBe('ada@example.com')
 
   // One user row, and a linked credential (email+password) account row.
-  const users = await db.select().from(schema.user).where(eq(schema.user.email, 'ada@example.com'))
-  expect(users).toHaveLength(1)
+  const users = await db.sql<{ rows: { id: string }[] }>`
+    SELECT "id" FROM "user" WHERE "email" = ${'ada@example.com'}`
+  expect(users.rows).toHaveLength(1)
 
-  const accounts = await db
-    .select()
-    .from(schema.account)
-    .where(eq(schema.account.userId, users[0]!.id))
-  expect(accounts).toHaveLength(1)
-  expect(accounts[0]!.providerId).toBe('credential')
-  expect(accounts[0]!.password).toBeTruthy()
+  const accounts = await db.sql<{ rows: { providerId: string; password: string | null }[] }>`
+    SELECT "providerId", "password" FROM "account" WHERE "userId" = ${users.rows[0]!.id}`
+  expect(accounts.rows).toHaveLength(1)
+  expect(accounts.rows[0]!.providerId).toBe('credential')
+  expect(accounts.rows[0]!.password).toBeTruthy()
 
   // Sign-up triggers a verification email; with no mail provider wired up it's
   // logged instead of sent.
@@ -98,13 +98,12 @@ test('signing in via a trusted provider links to the existing email account', as
   expect(result.data?.user.email).toBe(email)
 
   // Exactly one user, now with both a credential and a vercel account.
-  const users = await db.select().from(schema.user).where(eq(schema.user.email, email))
-  expect(users).toHaveLength(1)
-  const accounts = await db
-    .select()
-    .from(schema.account)
-    .where(eq(schema.account.userId, users[0]!.id))
-  expect(accounts.map((a) => a.providerId).sort()).toEqual(['credential', 'vercel'])
+  const users = await db.sql<{ rows: { id: string }[] }>`
+    SELECT "id" FROM "user" WHERE "email" = ${email}`
+  expect(users.rows).toHaveLength(1)
+  const accounts = await db.sql<{ rows: { providerId: string }[] }>`
+    SELECT "providerId" FROM "account" WHERE "userId" = ${users.rows[0]!.id}`
+  expect(accounts.rows!.map((a) => a.providerId).sort()).toEqual(['credential', 'vercel'])
 
   // The local sign-up logs its unsent verification email.
   expect('[email] not sent').toHaveBeenWarned()

@@ -1,13 +1,12 @@
 import { test, expect, afterEach } from 'vitest'
 import { PGlite } from '@electric-sql/pglite'
-import { drizzle } from 'drizzle-orm/pglite'
-import * as schema from '../database/schema'
+import { pgliteDialect } from './pglite-dialect'
 import { authOptions } from './auth'
 
 // `authOptions` reads process.env at call time, so each case mutates the env and
-// restores it afterwards. A dummy PGlite db is enough — building the options
-// object never touches the database.
-const db = drizzle(new PGlite(), { schema })
+// restores it afterwards. A dummy in-memory PGlite dialect is enough — building
+// the options object never touches the database.
+const db = { dialect: pgliteDialect(new PGlite()), type: 'postgres' } as const
 
 const ENV_KEYS = [
   'VERCEL',
