@@ -40,6 +40,13 @@ const newPasskeyName = ref('')
 const editingId = ref<string | null>(null)
 const editName = ref('')
 
+// Whether passkeys can be REGISTERED on this host (see server resolvePasskeyRp):
+// on preview aliases the RP ID won't match, so the ceremony always fails. When
+// off, the add form is swapped for a note — listing/deleting still work, as
+// those aren't WebAuthn ceremonies.
+const passkeysEnabled = ref(true)
+const passkeyHost = ref('')
+
 // O(1) lookup of the linked account for a provider (drives both the "linked"
 // badge and the unlink button), so the template doesn't scan `linked` twice.
 const linkedByProvider = computed(() => new Map(linked.value.map((a) => [a.providerId, a])))
@@ -60,8 +67,20 @@ async function load() {
     router.replace('/login')
     return
   }
-  await reloadLists()
+  await Promise.all([reloadLists(), loadPasskeySupport()])
   ready.value = true
+}
+
+// Whether this host can register passkeys, and where they do work — fetched once
+// (the answer is host-scoped, not user- or state-dependent).
+async function loadPasskeySupport() {
+  try {
+    const data = await (await fetch('/api/auth-providers')).json()
+    passkeysEnabled.value = data.passkeys ?? true
+    passkeyHost.value = data.passkeyHost ?? ''
+  } catch {
+    // best-effort; leave the add form enabled
+  }
 }
 
 onMounted(load)
@@ -227,7 +246,7 @@ async function logout() {
           <h2 class="font-semibold text-highlighted">Passkeys</h2>
         </template>
 
-        <form class="mb-4 flex gap-2" @submit.prevent="addPasskey">
+        <form v-if="passkeysEnabled" class="mb-4 flex gap-2" @submit.prevent="addPasskey">
           <UInput
             v-model="newPasskeyName"
             placeholder="Passkey name (e.g. MacBook Touch ID)"
@@ -236,6 +255,15 @@ async function logout() {
           />
           <UButton type="submit" label="Add passkey" icon="i-lucide-key-round" :disabled="busy" />
         </form>
+        <UAlert
+          v-else
+          class="mb-4"
+          color="neutral"
+          variant="subtle"
+          icon="i-lucide-info"
+          title="Passkeys can't be added on this domain"
+          :description="`Passkeys register only on ${passkeyHost || 'the production domain'}. Open the app there to add one; existing passkeys still work.`"
+        />
 
         <p v-if="!passkeys.length" class="text-sm text-muted">No passkeys yet.</p>
         <ul v-else class="divide-y divide-default">

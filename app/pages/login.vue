@@ -41,10 +41,15 @@ const notice = ref<string | null>(null)
 
 // Which providers actually have credentials configured on the server.
 const configured = shallowRef<string[]>([])
+// Optimistic: show the passkey button until the server says this host can't run
+// a WebAuthn ceremony (true on production/localhost, false on preview aliases).
+const passkeysEnabled = ref(true)
 onMounted(async () => {
   try {
     const res = await fetch('/api/auth-providers')
-    configured.value = (await res.json()).providers ?? []
+    const data = await res.json()
+    configured.value = data.providers ?? []
+    passkeysEnabled.value = data.passkeys ?? true
   } catch {
     // best-effort; buttons still render, just flagged as not-configured
   }
@@ -154,6 +159,7 @@ async function forgotPassword() {
           </template>
         </UButton>
         <UButton
+          v-if="passkeysEnabled"
           block
           color="neutral"
           variant="subtle"

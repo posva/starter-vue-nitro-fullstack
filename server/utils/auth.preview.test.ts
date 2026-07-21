@@ -1,7 +1,7 @@
 import { test, expect, afterEach, vi } from 'vitest'
 import { PGlite } from '@electric-sql/pglite'
 import { pgliteDialect } from './pglite-dialect'
-import { authOptions } from './auth'
+import { authOptions, passkeysEnabledForHost } from './auth'
 
 // `authOptions` reads process.env at call time, so each case mutates the env and
 // restores it afterwards. A dummy in-memory PGlite dialect is enough — building
@@ -170,6 +170,47 @@ test('deployed without a stable host: passkey RP falls back to localhost, does N
   expect(passkeyRp()).toEqual({ rpID: 'localhost', origin: 'http://localhost:3000' })
   expect(warn).toHaveBeenCalledWith(expect.stringContaining('resolved to "localhost"'))
   warn.mockRestore()
+})
+
+// The UI hides/explains the passkey affordance on hosts that can't run the
+// ceremony. `passkeysEnabledForHost` is that gate: it's true only when the
+// browser's host matches the RP ID (or is a subdomain of it).
+test('passkeysEnabledForHost: true on the production host, false on preview aliases', () => {
+  setEnv({
+    VERCEL: '1',
+    VERCEL_ENV: 'production',
+    NODE_ENV: 'production',
+    VERCEL_URL: 'app-etf0voy3t-posva.vercel.app',
+    VERCEL_PROJECT_PRODUCTION_URL: 'app.example.com',
+    BETTER_AUTH_URL: undefined,
+    RESEND_API_KEY: 'test-key',
+  })
+
+  expect(passkeysEnabledForHost('app.example.com')).toBe(true)
+  // A subdomain of the RP ID is a registrable suffix → allowed by WebAuthn.
+  expect(passkeysEnabledForHost('www.app.example.com')).toBe(true)
+  // The rotating per-deploy alias is a different registrable domain → blocked.
+  expect(passkeysEnabledForHost('app-etf0voy3t-posva.vercel.app')).toBe(false)
+  expect(passkeysEnabledForHost('app-git-feat-posva.vercel.app')).toBe(false)
+  // A host that merely ends with the string but isn't a subdomain must NOT match
+  // (the leading dot in the suffix check guards against `evil-app.example.com`).
+  expect(passkeysEnabledForHost('evil-app.example.com')).toBe(false)
+  expect(passkeysEnabledForHost('')).toBe(false)
+  expect(passkeysEnabledForHost(null)).toBe(false)
+})
+
+test('passkeysEnabledForHost: localhost dev matches regardless of port', () => {
+  setEnv({
+    VERCEL: undefined,
+    VERCEL_URL: undefined,
+    VERCEL_PROJECT_PRODUCTION_URL: undefined,
+    BETTER_AUTH_URL: undefined,
+    NODE_ENV: 'test',
+  })
+
+  expect(passkeysEnabledForHost('localhost:3000')).toBe(true)
+  expect(passkeysEnabledForHost('LOCALHOST')).toBe(true)
+  expect(passkeysEnabledForHost('example.com')).toBe(false)
 })
 
 test('off Vercel, passkey RP falls back to localhost', () => {

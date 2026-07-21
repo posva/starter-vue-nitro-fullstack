@@ -21,6 +21,36 @@ export async function useAuth(): Promise<Auth> {
   return _auth
 }
 
+// Passkeys (WebAuthn) are bound to a single, STABLE Relying Party ID: the
+// browser rejects any ceremony whose rpID isn't the effective domain it's on
+// (or a registrable suffix of it) — "RP ID … is invalid for this domain". So
+// the RP host must never be the per-deploy `VERCEL_URL`, which rotates every
+// build; the moment the browser lands on the production alias it mismatches.
+// Priority: BETTER_AUTH_URL → Vercel's stable production alias → localhost.
+// Preview branch aliases are each their own registrable domain under the
+// `*.vercel.app` public suffix, so passkeys only work on the host below — set
+// BETTER_AUTH_URL to a custom domain to enable them elsewhere.
+export function resolvePasskeyRp(): { rpID: string; origin: string } {
+  const rpUrl =
+    process.env.BETTER_AUTH_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL &&
+      `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`) ||
+    'http://localhost:3000'
+  const { hostname, origin } = new URL(rpUrl)
+  return { rpID: hostname, origin }
+}
+
+// Whether a browser on `host` (a Host header, may include a port) can run a
+// passkey ceremony: WebAuthn requires the RP ID to equal that host or be a
+// registrable suffix of it. On previews the two differ, so registration fails —
+// the UI uses this to hide/explain the passkey affordance instead.
+export function passkeysEnabledForHost(host: string | null | undefined): boolean {
+  const hostname = (host ?? '').split(':')[0].toLowerCase()
+  if (!hostname) return false
+  const { rpID } = resolvePasskeyRp()
+  return hostname === rpID || hostname.endsWith(`.${rpID}`)
+}
+
 // A pg Pool in prod, a Kysely dialect over PGlite in dev/tests — either way
 // Better Auth runs it through its built-in Kysely adapter.
 export function authOptions(
@@ -28,20 +58,7 @@ export function authOptions(
 ): BetterAuthOptions {
   const isProd = process.env.NODE_ENV === 'production'
 
-  // Passkeys (WebAuthn) are bound to a single, STABLE Relying Party ID: the
-  // browser rejects any ceremony whose rpID isn't the effective domain it's on
-  // (or a registrable suffix of it) — "RP ID … is invalid for this domain". So
-  // the RP host must never be the per-deploy `VERCEL_URL`, which rotates every
-  // build; the moment the browser lands on the production alias it mismatches.
-  // Preview branch aliases are each their own registrable domain under the
-  // `*.vercel.app` public suffix, so passkeys only work on the stable host below
-  // — set BETTER_AUTH_URL to a custom domain to enable them elsewhere.
-  const rpUrl =
-    process.env.BETTER_AUTH_URL ||
-    (process.env.VERCEL_PROJECT_PRODUCTION_URL &&
-      `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`) ||
-    'http://localhost:3000'
-  const { hostname: rpID, origin: rpOrigin } = new URL(rpUrl)
+  const { rpID, origin: rpOrigin } = resolvePasskeyRp()
 
   // A single Vercel build answers to several rotating hostnames — the unique
   // per-deploy `VERCEL_URL`, the stable git-branch preview alias, and the
@@ -66,7 +83,7 @@ export function authOptions(
     ? process.env.BETTER_AUTH_URL
     : vercelHosts.length > 0
       ? { allowedHosts: vercelHosts, protocol: 'https', fallback: `https://${vercelHosts[0]}` }
-      : rpUrl
+      : rpOrigin
 
   // If neither BETTER_AUTH_URL nor VERCEL_PROJECT_PRODUCTION_URL is set in a
   // deployed env, the RP silently falls back to localhost and every passkey
