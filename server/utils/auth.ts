@@ -26,18 +26,27 @@ export async function useAuth(): Promise<Auth> {
 export function authOptions(
   database: NonNullable<BetterAuthOptions['database']>,
 ): BetterAuthOptions {
-  // Single source of truth for the public origin, in priority order:
-  //   1. BETTER_AUTH_URL — explicit (set this for a stable production domain)
-  //   2. VERCEL_URL — auto-injected per deployment, so previews work out of the box
-  //   3. localhost — local dev
-  // Passkeys are bound to this origin, so it must match the URL the browser uses.
-  const appUrl =
-    process.env.BETTER_AUTH_URL ||
-    (process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}`) ||
-    'http://localhost:3000'
-  const { hostname, origin } = new URL(appUrl)
-
   const isProd = process.env.NODE_ENV === 'production'
+
+  // Passkeys (WebAuthn) are bound to a single, STABLE Relying Party ID: the
+  // browser rejects any ceremony whose rpID isn't the effective domain it's on
+  // ("RP ID … is invalid for this domain"). So the RP host must never be the
+  // per-deploy `VERCEL_URL` — that rotates every build, so the moment the
+  // browser lands on the production alias (or any other host) it mismatches.
+  // Pin to a stable host instead, in priority order:
+  //   1. BETTER_AUTH_URL               — explicit stable domain (best; set in prod)
+  //   2. VERCEL_PROJECT_PRODUCTION_URL — Vercel's stable production alias
+  //   3. localhost                     — local dev
+  // Preview branch aliases are each their own registrable domain under the
+  // `*.vercel.app` public suffix, so passkeys only work on the production host
+  // (or a custom domain wired via BETTER_AUTH_URL) — set that to enable them
+  // elsewhere.
+  const rpUrl =
+    process.env.BETTER_AUTH_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL &&
+      `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`) ||
+    'http://localhost:3000'
+  const { hostname: rpID, origin: rpOrigin } = new URL(rpUrl)
 
   // A single Vercel build answers to several rotating hostnames — the unique
   // per-deploy `VERCEL_URL`, the stable git-branch preview alias, and the
@@ -62,7 +71,7 @@ export function authOptions(
     ? process.env.BETTER_AUTH_URL
     : vercelHosts.length > 0
       ? { allowedHosts: vercelHosts, protocol: 'https', fallback: `https://${vercelHosts[0]}` }
-      : appUrl
+      : rpUrl
 
   // In prod we require a verified email to sign in — that only works if a mail
   // provider can actually send the verification link. Fail loud on misconfig.
@@ -168,9 +177,9 @@ export function authOptions(
 
     plugins: [
       passkey({
-        rpID: hostname,
+        rpID,
         rpName: 'Vue Nitro Fullstack',
-        origin,
+        origin: rpOrigin,
       }),
     ],
   }

@@ -34,6 +34,16 @@ function setEnv(env: Partial<Record<(typeof ENV_KEYS)[number], string | undefine
   }
 }
 
+// The passkey (WebAuthn) Relying Party config is pinned to a single stable
+// host — reach into the plugin to read what it resolved to.
+function passkeyRp(): { rpID?: string; origin?: string } {
+  const plugin = authOptions(db).plugins?.find((p) => p.id === 'passkey') as
+    | { options?: { rpID?: string; origin?: string } }
+    | undefined
+  if (!plugin) throw new Error('passkey plugin not registered')
+  return { rpID: plugin.options?.rpID, origin: plugin.options?.origin }
+}
+
 // On Vercel a single build serves several rotating hostnames (the unique
 // per-deploy URL, the git-branch preview alias, the production domain). Rather
 // than pinning one, we hand Better Auth its multi-domain `{ allowedHosts }`
@@ -106,4 +116,50 @@ test('off Vercel (local dev / tests): plain localhost origin, no dynamic config'
   })
 
   expect(authOptions(db).baseURL).toBe('http://localhost:3000')
+})
+
+// Passkeys need ONE stable Relying Party ID. The per-deploy `VERCEL_URL`
+// rotates every build, so binding the RP to it makes registration fail the
+// moment the browser lands on any other alias ("RP ID … is invalid for this
+// domain"). The RP must instead pin to the stable production host.
+test('passkey RP pins to the stable production host, NOT the rotating VERCEL_URL', () => {
+  setEnv({
+    VERCEL: '1',
+    VERCEL_ENV: 'production',
+    NODE_ENV: 'production',
+    VERCEL_URL: 'app-etf0voy3t-posva.vercel.app', // per-deploy, rotates
+    VERCEL_BRANCH_URL: 'app-git-main-posva.vercel.app',
+    VERCEL_PROJECT_PRODUCTION_URL: 'app.example.com', // stable
+    BETTER_AUTH_URL: undefined,
+    RESEND_API_KEY: 'test-key',
+  })
+
+  expect(passkeyRp()).toEqual({ rpID: 'app.example.com', origin: 'https://app.example.com' })
+})
+
+test('explicit BETTER_AUTH_URL wins for the passkey RP too', () => {
+  setEnv({
+    VERCEL: '1',
+    VERCEL_ENV: 'production',
+    NODE_ENV: 'production',
+    VERCEL_URL: 'app-etf0voy3t-posva.vercel.app',
+    VERCEL_PROJECT_PRODUCTION_URL: 'app.example.com',
+    BETTER_AUTH_URL: 'https://stable.example.com',
+    RESEND_API_KEY: 'test-key',
+  })
+
+  expect(passkeyRp()).toEqual({ rpID: 'stable.example.com', origin: 'https://stable.example.com' })
+})
+
+test('off Vercel, passkey RP falls back to localhost', () => {
+  setEnv({
+    VERCEL: undefined,
+    VERCEL_ENV: undefined,
+    VERCEL_URL: undefined,
+    VERCEL_PROJECT_PRODUCTION_URL: undefined,
+    BETTER_AUTH_URL: undefined,
+    NODE_ENV: 'test',
+  })
+
+  expect(passkeyRp()).toEqual({ rpID: 'localhost', origin: 'http://localhost:3000' })
 })
