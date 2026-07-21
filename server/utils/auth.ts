@@ -30,17 +30,12 @@ export function authOptions(
 
   // Passkeys (WebAuthn) are bound to a single, STABLE Relying Party ID: the
   // browser rejects any ceremony whose rpID isn't the effective domain it's on
-  // ("RP ID … is invalid for this domain"). So the RP host must never be the
-  // per-deploy `VERCEL_URL` — that rotates every build, so the moment the
-  // browser lands on the production alias (or any other host) it mismatches.
-  // Pin to a stable host instead, in priority order:
-  //   1. BETTER_AUTH_URL               — explicit stable domain (best; set in prod)
-  //   2. VERCEL_PROJECT_PRODUCTION_URL — Vercel's stable production alias
-  //   3. localhost                     — local dev
+  // (or a registrable suffix of it) — "RP ID … is invalid for this domain". So
+  // the RP host must never be the per-deploy `VERCEL_URL`, which rotates every
+  // build; the moment the browser lands on the production alias it mismatches.
   // Preview branch aliases are each their own registrable domain under the
-  // `*.vercel.app` public suffix, so passkeys only work on the production host
-  // (or a custom domain wired via BETTER_AUTH_URL) — set that to enable them
-  // elsewhere.
+  // `*.vercel.app` public suffix, so passkeys only work on the stable host below
+  // — set BETTER_AUTH_URL to a custom domain to enable them elsewhere.
   const rpUrl =
     process.env.BETTER_AUTH_URL ||
     (process.env.VERCEL_PROJECT_PRODUCTION_URL &&
@@ -72,6 +67,16 @@ export function authOptions(
     : vercelHosts.length > 0
       ? { allowedHosts: vercelHosts, protocol: 'https', fallback: `https://${vercelHosts[0]}` }
       : rpUrl
+
+  // If neither BETTER_AUTH_URL nor VERCEL_PROJECT_PRODUCTION_URL is set in a
+  // deployed env, the RP silently falls back to localhost and every passkey
+  // ceremony fails with an opaque browser error. Warn instead of failing dark.
+  if (isProd && rpID === 'localhost') {
+    console.warn(
+      '[auth] Passkey RP ID resolved to "localhost" in production — passkeys will fail. ' +
+        'Set BETTER_AUTH_URL (or expose VERCEL_PROJECT_PRODUCTION_URL) to a stable domain.',
+    )
+  }
 
   // In prod we require a verified email to sign in — that only works if a mail
   // provider can actually send the verification link. Fail loud on misconfig.

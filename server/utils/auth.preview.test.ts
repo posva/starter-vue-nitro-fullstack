@@ -1,4 +1,4 @@
-import { test, expect, afterEach } from 'vitest'
+import { test, expect, afterEach, vi } from 'vitest'
 import { PGlite } from '@electric-sql/pglite'
 import { pgliteDialect } from './pglite-dialect'
 import { authOptions } from './auth'
@@ -149,6 +149,27 @@ test('explicit BETTER_AUTH_URL wins for the passkey RP too', () => {
   })
 
   expect(passkeyRp()).toEqual({ rpID: 'stable.example.com', origin: 'https://stable.example.com' })
+})
+
+// Degraded deploy: system env vars not exposed, so no stable host is known.
+// The RP falls back to localhost (and `authOptions` warns) rather than binding
+// to the rotating VERCEL_URL — a mismatched-but-stable failure beats silently
+// half-reintroducing the original bug.
+test('deployed without a stable host: passkey RP falls back to localhost, does NOT use VERCEL_URL', () => {
+  const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  setEnv({
+    VERCEL: '1',
+    VERCEL_ENV: 'production',
+    NODE_ENV: 'production',
+    VERCEL_URL: 'app-etf0voy3t-posva.vercel.app',
+    VERCEL_PROJECT_PRODUCTION_URL: undefined,
+    BETTER_AUTH_URL: undefined,
+    RESEND_API_KEY: 'test-key',
+  })
+
+  expect(passkeyRp()).toEqual({ rpID: 'localhost', origin: 'http://localhost:3000' })
+  expect(warn).toHaveBeenCalledWith(expect.stringContaining('resolved to "localhost"'))
+  warn.mockRestore()
 })
 
 test('off Vercel, passkey RP falls back to localhost', () => {
