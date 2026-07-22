@@ -163,15 +163,16 @@ export function authOptions(
       // Clicking the link signs them in, so they land verified.
       autoSignInAfterVerification: true,
       sendVerificationEmail: async ({ user, url }) => {
-        try {
-          await sendEmail({
-            to: user.email,
-            subject: 'Verify your email',
-            text: `Confirm your email address:\n\n${url}`,
-          })
-        } catch (err) {
-          console.error('[auth] failed to send verification email', err)
-        }
+        // Let send failures propagate. On sign-up Better Auth runs this in the
+        // background and swallows throws (sign-up still succeeds, error logged),
+        // but the "resend verification" endpoint calls it directly and forwards
+        // the error to the client — so the user finally learns their email
+        // didn't go out, instead of it failing silently.
+        await sendEmail({
+          to: user.email,
+          subject: 'Verify your email',
+          text: `Confirm your email address:\n\n${url}`,
+        })
       },
     },
 

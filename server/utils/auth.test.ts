@@ -1,4 +1,4 @@
-import { test, expect, beforeAll } from 'vitest'
+import { test, expect, beforeAll, vi } from 'vitest'
 import { mockConsoleWarn, mockConsoleError } from '../../test/mock-warn'
 import { createDatabase, type Database } from 'db0'
 import pglite from 'db0/connectors/pglite'
@@ -68,6 +68,32 @@ test('valid credentials sign in, wrong password is rejected', async () => {
   // by Better Auth as a warning.
   expect('[email] not sent').toHaveBeenWarned()
   expect('Invalid password').toHaveBeenWarned()
+})
+
+test('resending a verification email surfaces a provider send failure', async () => {
+  // Regression: the verification-email handler used to swallow send errors, so a
+  // failing mail provider looked like success and the user got no feedback. The
+  // "resend verification" endpoint calls the handler directly and re-throws, so
+  // a genuine provider failure must reject (and reach the client).
+  const email = 'bounces@example.com'
+  // Sign up first with no mail provider configured — the unsent link is logged.
+  await auth.api.signUpEmail({ body: { name: 'Bouncer', email, password: 'supersecret123' } })
+  expect('[email] not sent').toHaveBeenWarned()
+
+  // Now wire a provider whose HTTP request fails, and resend. `sendEmail` throws,
+  // which must propagate out of the endpoint instead of being swallowed.
+  process.env.RESEND_API_KEY = 'test-key'
+  const fetchSpy = vi
+    .spyOn(globalThis, 'fetch')
+    .mockResolvedValue(new Response('nope', { status: 500 }))
+  try {
+    await expect(auth.api.sendVerificationEmail({ body: { email } })).rejects.toThrow(
+      /Resend request failed/,
+    )
+  } finally {
+    fetchSpy.mockRestore()
+    delete process.env.RESEND_API_KEY
+  }
 })
 
 test('signing in via a trusted provider links to the existing email account', async () => {
