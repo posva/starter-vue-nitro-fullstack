@@ -1,7 +1,13 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "@vue/tsconfig/tsconfig.dom.json",
-  "include": ["app/**/*", "app/**/*.vue", "shared"],
+  "include": [
+    "app/**/*",
+    "app/**/*.vue",
+    "shared",
+    "./auto-imports.d.ts",
+    "./components.d.ts"
+  ],
   // "exclude": [],
   "compilerOptions": {
     "rootDir": ".",

@@ -103,7 +103,14 @@ export default defineConfig((env) => ({
     patchVueExclude(vue(), /\?assets/),
     // Nuxt UI: registers Tailwind v4, auto-imports U* components, the icon resolver,
     // and the virtual `@nuxt/ui/vue-plugin` module installed in app/modules/ui.ts.
-    ui(),
+    ui({
+      autoImport: {
+        dts: './app/auto-imports.d.ts',
+      },
+      components: {
+        dts: './app/components.d.ts',
+      },
+    }),
     // clientVueRuntime(),
     devtoolsJson(),
     nitro({
