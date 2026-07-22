@@ -1,6 +1,6 @@
 # Previews & instant rollback
 
-This template gives every deployment its own database, using Neon's per-deployment branches — which is what makes Vercel's instant rollback safe alongside a database.
+This template gives every deployment its own database, using Neon's per-deployment branches. That's what makes Vercel's instant rollback safe alongside a database.
 
 ## The setup (Vercel ↔ Neon integration)
 
@@ -10,7 +10,7 @@ In the Neon integration's **Configure** dialog, enable **Create Database Branch 
 
 Neon uses copy-on-write branching, so every deployment gets its own isolated branch (a near-instant snapshot of the parent), and Vercel injects that branch's `DATABASE_URL` into the deployment.
 
-- **Require Active Resource Before Deploy** — a deploy only proceeds once its database branch is ready.
+- **Require Active Resource Before Deploy**: a deploy only proceeds once its database branch is ready.
 - Each deployment's `DATABASE_URL` points at **its own** branch, never a shared database.
 
 ## Migrations
@@ -23,12 +23,12 @@ pnpm db:migrate && pnpm build
 
 (set in Vercel → Settings → Build and Deployment)
 
-- **Preview** deploys migrate their own branch — so you can test a migration in isolation before merging.
+- **Preview** deploys migrate their own branch, so you can test a migration in isolation before merging.
 - **Production** deploys migrate that deployment's branch.
 
 ## Instant rollback
 
-Vercel's instant rollback reverts **code, not data**. Because each production deployment is paired with the branch it was built and migrated against, rolling back to a previous deployment also returns to the schema that code expects — no mismatch between old code and a newer schema.
+Vercel's instant rollback reverts **code, not data**. Because each production deployment is paired with the branch it was built and migrated against, rolling back to a previous deployment also returns to the schema that code expects, so there's no mismatch between old code and a newer schema.
 
 Caveats:
 
