@@ -1,9 +1,13 @@
 <script setup lang="ts">
+import { reactive } from 'vue'
 import { useQuery } from '@pinia/colada'
 import type { TableColumn } from '@nuxt/ui'
+import type { FormSubmitEvent } from '@nuxt/ui'
 import { useSeoMeta } from '@unhead/vue'
+import * as z from 'zod'
 import type { Todo } from '#shared/api/todos'
 import { todoListQuery } from '~/queries/todos'
+import { useCreateTodo, useToggleTodo, isOptimisticTodo } from '~/mutations/todos'
 
 useSeoMeta({
   title: 'Todos',
@@ -11,6 +15,29 @@ useSeoMeta({
 })
 
 const { state, asyncStatus, refresh } = useQuery(todoListQuery)
+// Optimistic: the icon flips instantly, rolls back (with a toast) on failure.
+const { mutate: toggleTodo } = useToggleTodo()
+
+const schema = z.object({
+  title: z.string().min(1, 'Title is required'),
+})
+type Schema = z.output<typeof schema>
+
+const newTodo = reactive<Partial<Schema>>({ title: '' })
+
+const { mutateAsync: createTodo } = useCreateTodo()
+
+async function onSubmit(event: FormSubmitEvent<Schema>) {
+  // Optimistic: clear right away, the todo is already in the list;
+  // the mutation handles rollback + toast on failure.
+  newTodo.title = ''
+  try {
+    await createTodo(event.data)
+  } catch {
+    // Restore the draft so it can be resubmitted, unless a new one was typed.
+    newTodo.title ||= event.data.title
+  }
+}
 
 const columns: TableColumn<Todo>[] = [
   { accessorKey: 'completed', header: 'Done' },
@@ -22,11 +49,21 @@ const columns: TableColumn<Todo>[] = [
 
 <template>
   <div class="space-y-6">
-    <UPageHeader title="Todos" description="Tasks stored in the database.">
-      <template #links>
-        <UButton to="/todos/new" icon="i-lucide-plus" label="New todo" />
-      </template>
-    </UPageHeader>
+    <UPageHeader title="Todos" description="Tasks stored in the database." />
+
+    <UForm :schema="schema" :state="newTodo" @submit="onSubmit">
+      <UFormField name="title">
+        <div class="flex items-start gap-3">
+          <UInput
+            v-model="newTodo.title"
+            placeholder="What needs doing?"
+            icon="i-lucide-plus"
+            class="flex-1"
+          />
+          <UButton type="submit" label="Add" />
+        </div>
+      </UFormField>
+    </UForm>
 
     <UAlert
       v-if="state.status === 'error'"
@@ -40,12 +77,33 @@ const columns: TableColumn<Todo>[] = [
     <UCard v-else :ui="{ body: 'p-0 sm:p-0' }">
       <UTable :data="state.data ?? []" :columns="columns" :loading="asyncStatus === 'loading'">
         <template #completed-cell="{ row }">
-          <UIcon
-            v-if="row.original.completed"
-            name="i-lucide-circle-check"
-            class="size-5 text-success"
+          <!-- Pending optimistic row: not on the server yet, so no operations. -->
+          <UButton
+            v-if="isOptimisticTodo(row.original)"
+            icon="i-lucide-loader-circle"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            disabled
+            :ui="{ leadingIcon: 'animate-spin text-dimmed' }"
+            aria-label="Saving todo"
           />
-          <UIcon v-else name="i-lucide-circle-dashed" class="size-5 text-dimmed" />
+          <UButton
+            v-else
+            :icon="row.original.completed ? 'i-lucide-circle-check' : 'i-lucide-circle-dashed'"
+            color="neutral"
+            variant="ghost"
+            size="sm"
+            :ui="{ leadingIcon: row.original.completed ? 'text-success' : 'text-dimmed' }"
+            :aria-label="row.original.completed ? 'Mark as not done' : 'Mark as done'"
+            @click="toggleTodo(row.original)"
+          />
+        </template>
+
+        <template #title-cell="{ row }">
+          <span :class="{ 'text-dimmed italic': isOptimisticTodo(row.original) }">
+            {{ row.original.title }}
+          </span>
         </template>
 
         <template #userId-cell="{ row }">

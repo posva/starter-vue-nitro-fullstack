@@ -22,3 +22,11 @@ export function getTodoList() {
 export function createTodo(payload: NewTodoPayload) {
   return todos.post<Todo>(payload)
 }
+
+export interface TodoPatch {
+  completed?: boolean
+}
+
+export function updateTodo(id: string, patch: TodoPatch) {
+  return todos.patch<Todo>(id, patch)
+}

@@ -87,13 +87,6 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/todos/new': RouteRecordInfo<
-      '/todos/new',
-      '/todos/new',
-      Record<never, never>,
-      Record<never, never>,
-      | never
-    >,
   }
 
   /**
@@ -166,14 +159,6 @@ declare module 'vue-router/auto-routes' {
     'app/pages/todos/index.vue': {
       routes:
         | '/todos/'
-      views:
-        | never
-      pathParamNames:
-        | never
-    }
-    'app/pages/todos/new.vue': {
-      routes:
-        | '/todos/new'
       views:
         | never
       pathParamNames:

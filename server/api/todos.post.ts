@@ -11,6 +11,10 @@ export default defineHandler(async (event) => {
   if (!title) {
     throw new HTTPError('title is required', { status: 400 })
   }
+  // Demo escape hatch: lets you see the optimistic rollback + toast in action.
+  if (title === 'fail') {
+    throw new HTTPError('Simulated failure (title was "fail")', { status: 500 })
+  }
 
   const auth = await useAuth()
   const session = await auth.api.getSession({ headers: event.req.headers })
