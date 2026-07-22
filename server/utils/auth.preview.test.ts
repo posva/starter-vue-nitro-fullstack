@@ -17,6 +17,7 @@ const ENV_KEYS = [
   'BETTER_AUTH_URL',
   'NODE_ENV',
   'RESEND_API_KEY',
+  'EMAIL_FROM',
 ] as const
 const snapshot = Object.fromEntries(ENV_KEYS.map((k) => [k, process.env[k]]))
 
