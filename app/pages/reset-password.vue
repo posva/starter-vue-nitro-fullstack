@@ -78,6 +78,7 @@ async function submit(event: FormSubmitEvent<Schema>) {
       <UForm v-else :schema="schema" :state="state" class="space-y-4" @submit="submit">
         <UFormField name="password" label="New password" required>
           <UInput
+            id="new-password"
             v-model="state.password"
             type="password"
             autocomplete="new-password"

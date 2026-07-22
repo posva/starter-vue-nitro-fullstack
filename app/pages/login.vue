@@ -173,11 +173,17 @@ async function forgotPassword() {
       <USeparator label="or" class="my-4" />
 
       <UForm :schema="schema" :state="form" class="space-y-4" @submit="submitEmail">
-        <UFormField v-if="mode === 'sign-up'" name="name" label="Name" required>
-          <UInput v-model="form.name" autocomplete="name" class="w-full" />
+        <UFormField v-show="mode === 'sign-up'" name="name" label="Name" required>
+          <UInput id="name" v-model="form.name" autocomplete="name" class="w-full" />
         </UFormField>
         <UFormField name="email" label="Email" required>
-          <UInput v-model="form.email" type="email" autocomplete="email" class="w-full" />
+          <UInput
+            id="email"
+            v-model="form.email"
+            type="email"
+            autocomplete="username"
+            class="w-full"
+          />
         </UFormField>
         <UFormField name="password" label="Password" required>
           <template v-if="mode === 'sign-in'" #hint>
@@ -190,6 +196,7 @@ async function forgotPassword() {
             />
           </template>
           <UInput
+            id="password"
             v-model="form.password"
             type="password"
             :autocomplete="mode === 'sign-up' ? 'new-password' : 'current-password'"
