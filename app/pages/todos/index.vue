@@ -2,7 +2,8 @@
 import { useQuery } from '@pinia/colada'
 import type { TableColumn } from '@nuxt/ui'
 import { useSeoMeta } from '@unhead/vue'
-import { todoListQuery, type Todo } from '~/queries/todos'
+import type { Todo } from '#shared/api/todos'
+import { todoListQuery } from '~/queries/todos'
 
 useSeoMeta({
   title: 'Todos',

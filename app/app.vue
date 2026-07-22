@@ -14,7 +14,7 @@ const { session, pending } = useAuth()
 const navItems = computed<NavigationMenuItem[]>(() => [
   { label: 'Home', to: '/', icon: 'i-lucide-house' },
   { label: 'Todos', to: '/todos', icon: 'i-lucide-list-checks' },
-  { label: 'Product', to: '/producs/254', icon: 'i-lucide-package' },
+  { label: 'Product', to: '/products/254', icon: 'i-lucide-package' },
   { label: 'About', to: '/about', icon: 'i-lucide-info' },
 ])
 

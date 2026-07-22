@@ -66,9 +66,9 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/producs/[productId]': RouteRecordInfo<
-      '/producs/[productId]',
-      '/producs/:productId',
+    '/products/[productId]': RouteRecordInfo<
+      '/products/[productId]',
+      '/products/:productId',
       { productId: string },
       { productId: string },
       | never
@@ -147,9 +147,9 @@ declare module 'vue-router/auto-routes' {
       pathParamNames:
         | never
     }
-    'app/pages/producs/[productId].vue': {
+    'app/pages/products/[productId].vue': {
       routes:
-        | '/producs/[productId]'
+        | '/products/[productId]'
       views:
         | never
       pathParamNames:

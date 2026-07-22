@@ -1,13 +1,5 @@
 import { defineQueryOptions } from '@pinia/colada'
-import { todos } from '#shared/api/todos'
-
-export interface Todo {
-  id: string
-  title: string
-  completed: boolean
-  userId: string | null
-  createdAt: string
-}
+import { getTodoList } from '#shared/api/todos'
 
 export const TODO_QUERY_KEYS = {
   root: ['todos'] as const,
@@ -16,5 +8,5 @@ export const TODO_QUERY_KEYS = {
 
 export const todoListQuery = defineQueryOptions({
   key: TODO_QUERY_KEYS.root,
-  query: () => todos.get<Todo[]>('/'),
+  query: getTodoList,
 })

@@ -1,16 +1,12 @@
 import { defineMutation, useMutation, useQueryCache } from '@pinia/colada'
-import { todos } from '#shared/api/todos'
-import { TODO_QUERY_KEYS, type Todo } from '~/queries/todos'
-
-export interface NewTodoPayload {
-  title: string
-}
+import { createTodo, type NewTodoPayload } from '#shared/api/todos'
+import { TODO_QUERY_KEYS } from '~/queries/todos'
 
 export const useCreateTodo = defineMutation(() => {
   const queryCache = useQueryCache()
 
   return useMutation({
-    mutation: (payload: NewTodoPayload) => todos.post<Todo>(payload),
+    mutation: (payload: NewTodoPayload) => createTodo(payload),
     onSettled() {
       // Refresh any list of todos (todos/index.vue, …).
       queryCache.invalidateQueries({ key: TODO_QUERY_KEYS.root })

@@ -13,7 +13,7 @@ export default defineHandler(async (event) => {
   }
 
   const auth = await useAuth()
-  const session = await auth.api.getSession({ headers: event.headers })
+  const session = await auth.api.getSession({ headers: event.req.headers })
 
   const db = await useDb()
   const { rows } = await db.sql<{ rows: Todo[] }>`
