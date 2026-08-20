@@ -25,3 +25,4 @@ components.d.ts
 .vercel
 .env
 .env*.local
+.devtools-oxc
