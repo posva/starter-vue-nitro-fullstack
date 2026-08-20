@@ -6,7 +6,6 @@ import vue, { type Api } from '@vitejs/plugin-vue'
 import ui from '@nuxt/ui/vite'
 import vueRouter from 'vue-router/vite'
 import devtoolsJson from 'vite-plugin-devtools-json'
-import { DevTools } from '@vitejs/devtools'
 import bundleAnalyzer from 'vite-bundle-analyzer'
 import { nitro } from 'nitro/vite'
 
@@ -21,6 +20,9 @@ const r = (pkg: string, file: string) => join(dirname(require.resolve(pkg + '/pa
 // Absolute path to this config's directory (the project root), used to mirror
 // tsconfig's `~/* -> app/*` path mapping for runtime module resolution.
 const rootDir = dirname(fileURLToPath(import.meta.url))
+
+// Analyze the build on explicit env var because it's costly (~3x build CPU).
+const analyzeBuild = !!process.env.DEVTOOLS
 
 // Force Vue's ESM (esm-bundler) builds on the server: Node/SSR resolution otherwise picks the
 // `node` export condition → CJS, which tree-shakes worse (~12KB gzip larger server bundle).
@@ -117,9 +119,8 @@ export default defineConfig((env) => ({
     }),
     // clientVueRuntime(),
     devtoolsJson(),
-    // Vite DevTools (https://devtools.vite.dev) — dev-only floating panel. Returns a
-    // Promise<Plugin[]>, which Vite awaits and flattens inline; `false` is ignored.
-    env.command === 'serve' && DevTools(),
+    // Lazy import to keep it out of the build's config load.
+    env.command === 'serve' && import('@vitejs/devtools').then((m) => m.DevTools()),
     nitro({
       serverDir: './server',
       // alias: env.command === 'build' ? vueServerAliases : {},
@@ -133,7 +134,7 @@ export default defineConfig((env) => ({
     client: {
       build: {
         rolldownOptions: {
-          devtools: {},
+          ...(analyzeBuild && { devtools: {} }),
           input: './app/entry-client.ts',
         },
       },
