@@ -114,9 +114,6 @@ async function link(provider: SocialProvider) {
   })
 }
 
-// Better Auth >= 1.7 selects the account by its LOCAL row id (`account.id`),
-// not by `providerId` + the provider-side `accountId` — passing those is
-// rejected now.
 function unlink(id: string) {
   return run(() => authClient.unlinkAccount({ accountId: id }), 'Could not unlink')
 }
