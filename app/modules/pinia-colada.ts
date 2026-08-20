@@ -30,10 +30,10 @@ export default defineModule({
       // to adapt the reviver below aswell
       // state.add('pinia_colada_eval', () => uneval(serializeQueryCache(queryCache)))
       state.add('pinia_colada', () => {
-        // TODO: better error handling
         return stringify(serializeQueryCache(queryCache), {
           // TODO: auto load payload reducers?
-          // reducers for complex types
+          // errored entries hold an Error, which devalue can't serialize natively
+          Error: (v: unknown): false | ErrorReduced => v instanceof Error && [v.name, v.message],
         })
       })
     } else {
@@ -44,7 +44,7 @@ export default defineModule({
         hydrateQueryCache(
           queryCache,
           parse(state, {
-            // revivers
+            Error: ([name, message]: ErrorReduced) => Object.assign(new Error(message), { name }),
           }),
         )
       }
@@ -58,3 +58,8 @@ export default defineModule({
     }
   },
 })
+
+/**
+ * Reduced type to serialize errors
+ */
+type ErrorReduced = [name: string, message: string]

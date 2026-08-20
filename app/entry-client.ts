@@ -1,12 +1,16 @@
 import { createSSRApp } from 'vue'
 import { createWebHistory, RouterLink, RouterView } from 'vue-router'
+import { DataLoaderPlugin } from 'vue-router/experimental'
 import App from './app.vue'
 import { createAppRouter } from './router.ts'
 import { installModules } from './modules'
+import { isExpectedApiError } from './lib/errors.ts'
 
 async function main() {
   const app = createSSRApp(App)
   const router = createAppRouter(createWebHistory())
+  // must be before router
+  app.use(DataLoaderPlugin, { router, errors: isExpectedApiError })
   app.use(router)
   app.component('RouterLink', RouterLink)
   app.component('RouterView', RouterView)
