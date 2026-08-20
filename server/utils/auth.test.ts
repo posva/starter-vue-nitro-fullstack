@@ -6,6 +6,7 @@ import type { PGlite } from '@electric-sql/pglite'
 import { pgliteDialect } from './pglite-dialect'
 import { betterAuth } from 'better-auth'
 import { handleOAuthUserInfo } from 'better-auth/oauth2'
+import { createOAuthAccountIssuer } from 'better-auth/db'
 import { runMigrations } from '../database/migrate'
 import { authOptions } from './auth'
 
@@ -39,11 +40,19 @@ test('email + password sign-up creates a user with a credential account', async 
     SELECT "id" FROM "user" WHERE "email" = ${'ada@example.com'}`
   expect(users.rows).toHaveLength(1)
 
-  const accounts = await db.sql<{ rows: { providerId: string; password: string | null }[] }>`
-    SELECT "providerId", "password" FROM "account" WHERE "userId" = ${users.rows[0]!.id}`
+  const accounts = await db.sql<{
+    rows: { providerId: string; issuer: string; accountId: string; password: string | null }[]
+  }>`
+    SELECT "providerId", "issuer", "accountId", "password" FROM "account"
+    WHERE "userId" = ${users.rows[0]!.id}`
   expect(accounts.rows).toHaveLength(1)
   expect(accounts.rows[0]!.providerId).toBe('credential')
   expect(accounts.rows[0]!.password).toBeTruthy()
+  // Better Auth >= 1.7 keys an account by (issuer, accountId) rather than
+  // (providerId, accountId): local password accounts get the synthetic
+  // `local:credential` issuer and the user's own id as the account id.
+  expect(accounts.rows[0]!.issuer).toBe('local:credential')
+  expect(accounts.rows[0]!.accountId).toBe(users.rows[0]!.id)
 
   // Sign-up triggers a verification email; with no mail provider wired up it's
   // logged instead of sent.
@@ -114,7 +123,14 @@ test('signing in via a trusted provider links to the existing email account', as
     { context: ctx, request: undefined } as never,
     {
       userInfo: { id: 'vercel-user-1', email, emailVerified: true, name: 'Linkme' },
-      account: { providerId: 'vercel', accountId: 'vercel-user-1' },
+      // Better Auth >= 1.7 keys the account by issuer; the real callback derives
+      // it from the provider config (`resolveOAuthAccountKey`), so use the same
+      // helper here rather than hand-writing the value the provider would get.
+      account: {
+        providerId: 'vercel',
+        issuer: createOAuthAccountIssuer('vercel'),
+        accountId: 'vercel-user-1',
+      },
       callbackURL: '/account',
       disableSignUp: false,
     } as never,
@@ -127,9 +143,16 @@ test('signing in via a trusted provider links to the existing email account', as
   const users = await db.sql<{ rows: { id: string }[] }>`
     SELECT "id" FROM "user" WHERE "email" = ${email}`
   expect(users.rows).toHaveLength(1)
-  const accounts = await db.sql<{ rows: { providerId: string }[] }>`
-    SELECT "providerId" FROM "account" WHERE "userId" = ${users.rows[0]!.id}`
+  const accounts = await db.sql<{ rows: { providerId: string; issuer: string }[] }>`
+    SELECT "providerId", "issuer" FROM "account" WHERE "userId" = ${users.rows[0]!.id}`
   expect(accounts.rows!.map((a) => a.providerId).sort()).toEqual(['credential', 'vercel'])
+  // An OAuth provider that declares no issuer of its own gets the synthetic
+  // `local:oauth:<providerId>` namespace (Vercel declares none; Google would
+  // use `https://accounts.google.com`).
+  expect(Object.fromEntries(accounts.rows!.map((a) => [a.providerId, a.issuer]))).toEqual({
+    credential: 'local:credential',
+    vercel: 'local:oauth:vercel',
+  })
 
   // The local sign-up logs its unsent verification email.
   expect('[email] not sent').toHaveBeenWarned()

@@ -25,7 +25,7 @@ const schema = z.object({
 })
 type Schema = z.output<typeof schema>
 
-const state = reactive<Partial<Schema>>({ password: '' })
+const state = reactive<Schema>({ password: '' })
 
 definePage({
   params: {

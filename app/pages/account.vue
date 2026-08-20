@@ -114,8 +114,11 @@ async function link(provider: SocialProvider) {
   })
 }
 
-function unlink(providerId: string, accountId: string) {
-  return run(() => authClient.unlinkAccount({ providerId, accountId }), 'Could not unlink')
+// Better Auth >= 1.7 selects the account by its LOCAL row id (`account.id`),
+// not by `providerId` + the provider-side `accountId` — passing those is
+// rejected now.
+function unlink(id: string) {
+  return run(() => authClient.unlinkAccount({ accountId: id }), 'Could not unlink')
 }
 
 function addPasskey() {
@@ -225,7 +228,7 @@ async function logout() {
                 variant="ghost"
                 size="sm"
                 :disabled="busy"
-                @click="unlink(p.id, linkedByProvider.get(p.id)!.accountId)"
+                @click="unlink(linkedByProvider.get(p.id)!.id)"
               />
             </template>
             <UButton
