@@ -48,9 +48,6 @@ test('email + password sign-up creates a user with a credential account', async 
   expect(accounts.rows).toHaveLength(1)
   expect(accounts.rows[0]!.providerId).toBe('credential')
   expect(accounts.rows[0]!.password).toBeTruthy()
-  // Better Auth >= 1.7 keys an account by (issuer, accountId) rather than
-  // (providerId, accountId): local password accounts get the synthetic
-  // `local:credential` issuer and the user's own id as the account id.
   expect(accounts.rows[0]!.issuer).toBe('local:credential')
   expect(accounts.rows[0]!.accountId).toBe(users.rows[0]!.id)
 
@@ -123,9 +120,8 @@ test('signing in via a trusted provider links to the existing email account', as
     { context: ctx, request: undefined } as never,
     {
       userInfo: { id: 'vercel-user-1', email, emailVerified: true, name: 'Linkme' },
-      // Better Auth >= 1.7 keys the account by issuer; the real callback derives
-      // it from the provider config (`resolveOAuthAccountKey`), so use the same
-      // helper here rather than hand-writing the value the provider would get.
+      // Derived rather than a literal, so the test can't drift from how Better
+      // Auth namespaces a provider that declares no issuer of its own.
       account: {
         providerId: 'vercel',
         issuer: createOAuthAccountIssuer('vercel'),
@@ -146,9 +142,6 @@ test('signing in via a trusted provider links to the existing email account', as
   const accounts = await db.sql<{ rows: { providerId: string; issuer: string }[] }>`
     SELECT "providerId", "issuer" FROM "account" WHERE "userId" = ${users.rows[0]!.id}`
   expect(accounts.rows!.map((a) => a.providerId).sort()).toEqual(['credential', 'vercel'])
-  // An OAuth provider that declares no issuer of its own gets the synthetic
-  // `local:oauth:<providerId>` namespace (Vercel declares none; Google would
-  // use `https://accounts.google.com`).
   expect(Object.fromEntries(accounts.rows!.map((a) => [a.providerId, a.issuer]))).toEqual({
     credential: 'local:credential',
     vercel: 'local:oauth:vercel',
