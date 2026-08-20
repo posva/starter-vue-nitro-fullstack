@@ -23,7 +23,7 @@ const schema = z.object({
 })
 type Schema = z.output<typeof schema>
 
-const newTodo = reactive<Partial<Schema>>({ title: '' })
+const newTodo = reactive<Schema>({ title: '' })
 
 const { mutateAsync: createTodo } = useCreateTodo()
 

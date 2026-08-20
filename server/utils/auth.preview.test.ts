@@ -37,7 +37,7 @@ function setEnv(env: Partial<Record<(typeof ENV_KEYS)[number], string | undefine
 
 // The passkey (WebAuthn) Relying Party config is pinned to a single stable
 // host — reach into the plugin to read what it resolved to.
-function passkeyRp(): { rpID?: string; origin?: string } {
+function passkeyRp(): { rpID?: string | undefined; origin?: string | undefined } {
   const plugin = authOptions(db).plugins?.find((p) => p.id === 'passkey') as
     | { options?: { rpID?: string; origin?: string } }
     | undefined

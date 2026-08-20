@@ -45,7 +45,7 @@ export function resolvePasskeyRp(): { rpID: string; origin: string } {
 // registrable suffix of it. On previews the two differ, so registration fails —
 // the UI uses this to hide/explain the passkey affordance instead.
 export function passkeysEnabledForHost(host: string | null | undefined): boolean {
-  const hostname = (host ?? '').split(':')[0].toLowerCase()
+  const hostname = (host ?? '').split(':')[0]!.toLowerCase()
   if (!hostname) return false
   const { rpID } = resolvePasskeyRp()
   return hostname === rpID || hostname.endsWith(`.${rpID}`)

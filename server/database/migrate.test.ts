@@ -28,6 +28,24 @@ test('applies every migration to an empty database, in order', async () => {
   expect(passkeys.rows).toEqual([])
 })
 
+test('account identity is keyed by (issuer, accountId) for Better Auth >= 1.7', async () => {
+  const db = freshDb()
+  await runMigrations(db)
+
+  // `issuer` must exist AND be NOT NULL: Better Auth declares it required, so a
+  // nullable column would let a half-migrated row through instead of failing.
+  const { rows: cols } = await db.sql<{ rows: { isNullable: string }[] }>`
+    SELECT "is_nullable" AS "isNullable" FROM information_schema.columns
+    WHERE table_name = 'account' AND column_name = 'issuer'`
+  expect(cols).toEqual([{ isNullable: 'NO' }])
+
+  // The unique index is what actually enforces one row per provider identity.
+  const { rows: idx } = await db.sql<{ rows: { indexname: string }[] }>`
+    SELECT "indexname" FROM pg_indexes
+    WHERE tablename = 'account' AND indexname = 'account_issuer_accountId_uidx'`
+  expect(idx).toHaveLength(1)
+})
+
 test('is idempotent — a second run applies nothing', async () => {
   const db = freshDb()
   await runMigrations(db)
