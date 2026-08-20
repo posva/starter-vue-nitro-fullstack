@@ -84,7 +84,10 @@ export default defineConfig((env) => ({
       routesFolder: 'app/pages',
       dts: './app/routes.d.ts',
       experimental: {
-        autoExportsDataLoaders: 'app/loaders',
+        // Matched against the import SPECIFIER resolved from the project root
+        // (not the resolved file id), so cover both the authored `~/loaders/x`
+        // form and Vite's root-relative `/app/loaders/x.ts` rewrite.
+        autoExportsDataLoaders: ['~/loaders/**/*', 'app/loaders/**/*'],
         paramParsers: {
           dir: 'app/params',
         },

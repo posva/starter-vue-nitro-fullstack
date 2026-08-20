@@ -1,12 +1,17 @@
+<script lang="ts">
+// Exporting the loader from the page registers it. `autoExportsDataLoaders`
+// also does this, but not in the nitro SSR build, so keep the explicit export.
+export { useTodoList } from '~/loaders/todos'
+</script>
+
 <script setup lang="ts">
 import { reactive } from 'vue'
-import { useQuery } from '@pinia/colada'
 import type { TableColumn } from '@nuxt/ui'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { useSeoMeta } from '@unhead/vue'
 import * as z from 'zod'
 import type { Todo } from '#shared/api/todos'
-import { todoListQuery } from '~/queries/todos'
+import { useTodoList } from '~/loaders/todos'
 import { useCreateTodo, useToggleTodo, isOptimisticTodo } from '~/mutations/todos'
 
 useSeoMeta({
@@ -14,7 +19,7 @@ useSeoMeta({
   description: 'Tasks stored in the database.',
 })
 
-const { state, asyncStatus, refresh } = useQuery(todoListQuery)
+const { state, asyncStatus, refresh } = useTodoList()
 // Optimistic: the icon flips instantly, rolls back (with a toast) on failure.
 const { mutate: toggleTodo } = useToggleTodo()
 

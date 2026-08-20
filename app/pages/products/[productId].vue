@@ -1,14 +1,17 @@
+<script lang="ts">
+// Exporting the loader from the page registers it. `autoExportsDataLoaders`
+// also does this, but not in the nitro SSR build, so keep the explicit export.
+export { useProductData } from '~/loaders/products'
+</script>
+
 <script lang="ts" setup>
-import { useQuery } from '@pinia/colada'
 import { useRoute } from 'vue-router'
 import { useSeoMeta } from '@unhead/vue'
-import { productByIdQuery } from '~/queries/products'
+import { useProductData } from '~/loaders/products'
 
 const route = useRoute()
 
-// Options getter: the key tracks the route param, so navigating between
-// products swaps cache entries automatically.
-const { state, asyncStatus } = useQuery(() => productByIdQuery(route.params.productId))
+const { state, asyncStatus } = useProductData()
 
 // Getters keep the tags in sync with the loaded product.
 useSeoMeta({

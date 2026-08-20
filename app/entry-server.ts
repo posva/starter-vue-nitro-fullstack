@@ -2,6 +2,7 @@
 import { createSSRApp } from 'vue'
 import { renderToString } from 'vue/server-renderer'
 import { createMemoryHistory, RouterLink, RouterView } from 'vue-router'
+import { DataLoaderPlugin } from 'vue-router/experimental'
 import { createHead, transformHtmlTemplate } from '@unhead/vue/server'
 
 import App from './app.vue'
@@ -11,6 +12,7 @@ import { installModules, createRenderedHook } from './modules'
 import clientAssets from './entry-client.ts?assets=client'
 import { InitialStateServer } from './initial-state.ts'
 import { inlineCriticalCss } from './lib/critical-css.ts'
+import { isExpectedApiError } from './lib/errors.ts'
 
 // `?assets=client` resolves against the client build graph. Plain `?assets`
 // would resolve against the SSR graph, whose emitted CSS duplicates the
@@ -22,6 +24,8 @@ async function handler(request: Request): Promise<Response> {
   const router = createAppRouter(createMemoryHistory())
   app.component('RouterLink', RouterLink)
   app.component('RouterView', RouterView)
+  // must be before router
+  app.use(DataLoaderPlugin, { router, isSSR: true, errors: isExpectedApiError })
   app.use(router)
 
   // Install the head BEFORE modules so Nuxt UI reuses it (it only creates its own
