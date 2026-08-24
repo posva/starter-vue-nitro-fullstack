@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, shallowRef } from 'vue'
+import { onMounted, reactive, ref, shallowRef } from 'vue'
 import { useRouter } from 'vue-router'
-import * as z from 'zod'
-import type { FormSubmitEvent } from '@nuxt/ui'
+import { useValidup } from '@validup/vue'
+import { credentialsValidator, type AuthMode, type Credentials } from '#shared/validators/auth'
 import { authClient } from '../lib/auth-client'
 import { useAuth } from '../lib/use-auth'
 import { SOCIAL, type SocialProvider } from '../lib/social-providers'
 import { errorMessage } from '../lib/errors'
+import { fieldError } from '../lib/form'
 import { useSeoMeta } from '@unhead/vue'
 
 const router = useRouter()
@@ -17,24 +18,12 @@ useSeoMeta({
   robots: 'noindex',
 })
 
-type Mode = 'sign-in' | 'sign-up'
-const mode = ref<Mode>('sign-in')
+const mode = ref<AuthMode>('sign-in')
 
-// Schema depends on the mode: name is only collected (and required) on sign-up.
-const schema = computed(() =>
-  mode.value === 'sign-up'
-    ? z.object({
-        name: z.string().min(1, 'Name is required'),
-        email: z.email('Invalid email'),
-        password: z.string().min(8, 'Min 8 characters'),
-      })
-    : z.object({
-        email: z.email('Invalid email'),
-        password: z.string().min(8, 'Min 8 characters'),
-      }),
-)
-
-const form = reactive({ name: '', email: '', password: '' })
+const form = reactive<Credentials>({ name: '', email: '', password: '' })
+// The mode IS the container group: `name` is mounted into `sign-up` only, so
+// flipping this ref changes which mounts run. No second schema to keep in sync.
+const v = useValidup(credentialsValidator, form, { group: mode })
 const pending = ref(false)
 const error = ref<string | null>(null)
 const notice = ref<string | null>(null)
@@ -62,6 +51,14 @@ onMounted(async () => {
 function toggleMode() {
   mode.value = mode.value === 'sign-in' ? 'sign-up' : 'sign-in'
   error.value = notice.value = awaitingEmail.value = null
+  // Errors from the mode you just left shouldn't greet you in the new one.
+  v.$reset()
+}
+
+function backToSignIn() {
+  mode.value = 'sign-in'
+  error.value = notice.value = awaitingEmail.value = null
+  v.$reset()
 }
 
 async function done() {
@@ -69,17 +66,20 @@ async function done() {
   router.push('/account')
 }
 
-async function submitEmail(
-  event: FormSubmitEvent<{ name?: string; email: string; password: string }>,
-) {
+async function submitEmail() {
+  // Runs the active group only, so `name` is required on sign-up and ignored
+  // on sign-in — hence no `!` on `result.data.name` below.
+  const result = await v.$validate()
+  if (!result.success) return
+
   error.value = notice.value = awaitingEmail.value = null
   pending.value = true
   try {
     if (mode.value === 'sign-up') {
       const { data, error: e } = await authClient.signUp.email({
-        name: event.data.name!,
-        email: event.data.email,
-        password: event.data.password,
+        name: result.data.name,
+        email: result.data.email,
+        password: result.data.password,
         // Where the verification link lands once clicked.
         callbackURL: '/account',
       })
@@ -87,13 +87,13 @@ async function submitEmail(
       // No session token means email verification is required before sign-in:
       // don't navigate (it would bounce back), show the "check your email" panel.
       if (!data?.token) {
-        awaitingEmail.value = event.data.email
+        awaitingEmail.value = result.data.email
         return
       }
     } else {
       const { error: e } = await authClient.signIn.email({
-        email: event.data.email,
-        password: event.data.password,
+        email: result.data.email,
+        password: result.data.password,
       })
       if (e) throw new Error(e.message)
     }
@@ -209,7 +209,7 @@ async function forgotPassword() {
             color="neutral"
             label="Back to sign in"
             :disabled="pending"
-            @click="((mode = 'sign-in'), (awaitingEmail = null), (error = notice = null))"
+            @click="backToSignIn"
           />
         </div>
       </template>
@@ -246,20 +246,38 @@ async function forgotPassword() {
 
         <USeparator label="or" class="my-4" />
 
-        <UForm :schema="schema" :state="form" class="space-y-4" @submit="submitEmail">
-          <UFormField v-show="mode === 'sign-up'" name="name" label="Name" required>
-            <UInput id="name" v-model="form.name" autocomplete="name" class="w-full" />
+        <form class="space-y-4" @submit.prevent="submitEmail">
+          <UFormField
+            v-show="mode === 'sign-up'"
+            name="name"
+            label="Name"
+            required
+            :error="fieldError(v.fields.name)"
+          >
+            <UInput
+              id="name"
+              v-model="v.fields.name.$model.value"
+              autocomplete="name"
+              class="w-full"
+              @blur="v.fields.name.$touch()"
+            />
           </UFormField>
-          <UFormField name="email" label="Email" required>
+          <UFormField name="email" label="Email" required :error="fieldError(v.fields.email)">
             <UInput
               id="email"
-              v-model="form.email"
+              v-model="v.fields.email.$model.value"
               type="email"
               autocomplete="username"
               class="w-full"
+              @blur="v.fields.email.$touch()"
             />
           </UFormField>
-          <UFormField name="password" label="Password" required>
+          <UFormField
+            name="password"
+            label="Password"
+            required
+            :error="fieldError(v.fields.password)"
+          >
             <template v-if="mode === 'sign-in'" #hint>
               <UButton
                 variant="link"
@@ -271,10 +289,11 @@ async function forgotPassword() {
             </template>
             <UInput
               id="password"
-              v-model="form.password"
+              v-model="v.fields.password.$model.value"
               type="password"
               :autocomplete="mode === 'sign-up' ? 'new-password' : 'current-password'"
               class="w-full"
+              @blur="v.fields.password.$touch()"
             />
           </UFormField>
 
@@ -284,7 +303,7 @@ async function forgotPassword() {
             :loading="pending"
             :label="mode === 'sign-in' ? 'Sign in' : 'Sign up'"
           />
-        </UForm>
+        </form>
       </template>
 
       <template v-if="!awaitingEmail" #footer>

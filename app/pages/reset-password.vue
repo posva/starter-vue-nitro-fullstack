@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import * as z from 'zod'
-import type { FormSubmitEvent } from '@nuxt/ui'
+import { useValidup } from '@validup/vue'
+import { newPasswordValidator, type NewPassword } from '#shared/validators/auth'
 import { authClient } from '../lib/auth-client'
 import { errorMessage } from '../lib/errors'
+import { fieldError } from '../lib/form'
 import { useSeoMeta } from '@unhead/vue'
 
 useSeoMeta({
@@ -20,12 +21,9 @@ const pending = ref(false)
 const error = ref<string | null>(null)
 const done = ref(false)
 
-const schema = z.object({
-  password: z.string().min(8, 'Min 8 characters'),
-})
-type Schema = z.output<typeof schema>
-
-const state = reactive<Schema>({ password: '' })
+// Same password rule the sign-up form mounts — stated once in shared/validators.
+const state = reactive<NewPassword>({ password: '' })
+const v = useValidup(newPasswordValidator, state)
 
 definePage({
   params: {
@@ -42,12 +40,15 @@ onMounted(() => {
   if (!token.value) error.value = 'Missing or invalid reset token.'
 })
 
-async function submit(event: FormSubmitEvent<Schema>) {
+async function submit() {
+  const result = await v.$validate()
+  if (!result.success) return
+
   error.value = null
   pending.value = true
   try {
     const { error: e } = await authClient.resetPassword({
-      newPassword: event.data.password,
+      newPassword: result.data.password,
       token: token.value,
     })
     if (e) throw new Error(e.message)
@@ -75,14 +76,20 @@ async function submit(event: FormSubmitEvent<Schema>) {
         icon="i-lucide-circle-check"
         description="Password updated. Redirecting to sign in…"
       />
-      <UForm v-else :schema="schema" :state="state" class="space-y-4" @submit="submit">
-        <UFormField name="password" label="New password" required>
+      <form v-else class="space-y-4" @submit.prevent="submit">
+        <UFormField
+          name="password"
+          label="New password"
+          required
+          :error="fieldError(v.fields.password)"
+        >
           <UInput
             id="new-password"
-            v-model="state.password"
+            v-model="v.fields.password.$model.value"
             type="password"
             autocomplete="new-password"
             class="w-full"
+            @blur="v.fields.password.$touch()"
           />
         </UFormField>
 
@@ -101,7 +108,7 @@ async function submit(event: FormSubmitEvent<Schema>) {
           :loading="pending"
           :disabled="!token"
         />
-      </UForm>
+      </form>
     </UCard>
   </div>
 </template>
