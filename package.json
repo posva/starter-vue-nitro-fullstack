@@ -52,12 +52,15 @@
     "@nuxt/ui": "^4.10.0",
     "@pinia/colada": "^1.4.2",
     "@unhead/vue": "^3.3.2",
+    "@validup/vue": "^2.0.1",
+    "@validup/zod": "^2.0.1",
     "@vueuse/core": "^14.4.0",
     "better-auth": "^1.7.1",
     "devalue": "^5.9.0",
     "mande": "^2.0.10",
     "pinia": "^4.0.3",
     "tailwindcss": "^4.3.3",
+    "validup": "^2.0.1",
     "zod": "^4.4.3"
   }
 }

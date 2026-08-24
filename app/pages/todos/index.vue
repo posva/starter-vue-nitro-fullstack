@@ -7,10 +7,11 @@ export { useTodoList } from '~/loaders/todos'
 <script setup lang="ts">
 import { reactive } from 'vue'
 import type { TableColumn } from '@nuxt/ui'
-import type { FormSubmitEvent } from '@nuxt/ui'
 import { useSeoMeta } from '@unhead/vue'
-import * as z from 'zod'
-import type { Todo } from '#shared/api/todos'
+import { useValidup } from '@validup/vue'
+import type { NewTodoPayload, Todo } from '#shared/api/todos'
+import { todoDraftValidator } from '#shared/validators/todos'
+import { fieldError } from '~/lib/form'
 import { useTodoList } from '~/loaders/todos'
 import { useCreateTodo, useToggleTodo, isOptimisticTodo } from '~/mutations/todos'
 
@@ -23,24 +24,29 @@ const { state, asyncStatus, refresh } = useTodoList()
 // Optimistic: the icon flips instantly, rolls back (with a toast) on failure.
 const { mutate: toggleTodo } = useToggleTodo()
 
-const schema = z.object({
-  title: z.string().min(1, 'Title is required'),
-})
-type Schema = z.output<typeof schema>
-
-const newTodo = reactive<Schema>({ title: '' })
+const newTodo = reactive<NewTodoPayload>({ title: '' })
+// The same container `POST /api/todos` runs. A whitespace-only title used to
+// pass here and get rejected by the server (400, then rollback + toast); now
+// the shared rule catches it before the request goes out.
+const v = useValidup(todoDraftValidator, newTodo)
 
 const { mutateAsync: createTodo } = useCreateTodo()
 
-async function onSubmit(event: FormSubmitEvent<Schema>) {
+async function onSubmit() {
+  const result = await v.$validate()
+  if (!result.success) return
+
+  // Trimmed by the validator, so this is byte-for-byte what the server stores.
+  const payload = result.data
   // Optimistic: clear right away, the todo is already in the list;
   // the mutation handles rollback + toast on failure.
   newTodo.title = ''
+  v.$reset()
   try {
-    await createTodo(event.data)
+    await createTodo(payload)
   } catch {
     // Restore the draft so it can be resubmitted, unless a new one was typed.
-    newTodo.title ||= event.data.title
+    newTodo.title ||= payload.title
   }
 }
 
@@ -56,19 +62,20 @@ const columns: TableColumn<Todo>[] = [
   <div class="space-y-6">
     <UPageHeader title="Todos" description="Tasks stored in the database." />
 
-    <UForm :schema="schema" :state="newTodo" @submit="onSubmit">
-      <UFormField name="title">
+    <form @submit.prevent="onSubmit">
+      <UFormField name="title" :error="fieldError(v.fields.title)">
         <div class="flex items-start gap-3">
           <UInput
-            v-model="newTodo.title"
+            v-model="v.fields.title.$model.value"
             placeholder="What needs doing?"
             icon="i-lucide-plus"
             class="flex-1"
+            @blur="v.fields.title.$touch()"
           />
           <UButton type="submit" label="Add" />
         </div>
       </UFormField>
-    </UForm>
+    </form>
 
     <UAlert
       v-if="state.status === 'error'"
