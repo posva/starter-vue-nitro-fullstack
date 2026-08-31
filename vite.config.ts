@@ -21,6 +21,9 @@ const r = (pkg: string, file: string) => join(dirname(require.resolve(pkg + '/pa
 // tsconfig's `~/* -> app/*` path mapping for runtime module resolution.
 const rootDir = dirname(fileURLToPath(import.meta.url))
 
+// Analyze the build on explicit env var because it's costly (~3x build CPU).
+const analyzeBuild = !!process.env.DEVTOOLS
+
 // Force Vue's ESM (esm-bundler) builds on the server: Node/SSR resolution otherwise picks the
 // `node` export condition → CJS, which tree-shakes worse (~12KB gzip larger server bundle).
 // `nitro({ alias })` is the only knob the nitro build honors, but it applies the map *globally* —
@@ -116,6 +119,8 @@ export default defineConfig((env) => ({
     }),
     // clientVueRuntime(),
     devtoolsJson(),
+    // Lazy import to keep it out of the build's config load.
+    env.command === 'serve' && import('@vitejs/devtools').then((m) => m.DevTools()),
     nitro({
       serverDir: './server',
       // alias: env.command === 'build' ? vueServerAliases : {},
@@ -129,6 +134,7 @@ export default defineConfig((env) => ({
     client: {
       build: {
         rolldownOptions: {
+          ...(analyzeBuild && { devtools: {} }),
           input: './app/entry-client.ts',
         },
       },
