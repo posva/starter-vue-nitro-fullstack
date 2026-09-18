@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { RouterView } from 'vue-router'
 import { SpeedInsights } from '@vercel/speed-insights/vue'
-import { PiniaColadaDevtools } from '@pinia/colada-devtools'
 import type { NavigationMenuItem } from '@nuxt/ui'
 import { useAuth } from './lib/use-auth'
 import ColorModeToggle from './components/ColorModeToggle.vue'
@@ -40,8 +39,6 @@ useSeoMeta({
 <template>
   <UApp>
     <SpeedInsights />
-    <!-- Pinia Colada data-fetching devtools; auto-stripped from production builds. -->
-    <PiniaColadaDevtools />
 
     <!-- Flex shell so the footer stays in view on short pages (UApp renders no element). -->
     <div class="flex min-h-svh flex-col">

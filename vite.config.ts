@@ -119,8 +119,12 @@ export default defineConfig((env) => ({
     }),
     // clientVueRuntime(),
     devtoolsJson(),
-    // Lazy import to keep it out of the build's config load.
-    env.command === 'serve' && import('@vitejs/devtools').then((m) => m.DevTools()),
+    // Lazy import to keep the devtools and their Pinia Colada panel out of the
+    // build's config load. The Colada adapter must follow the DevTools plugin.
+    env.command === 'serve' &&
+      Promise.all([import('@vitejs/devtools'), import('@pinia/colada-devtools/vite')]).then(
+        ([devtools, coladaDevtools]) => [devtools.DevTools(), coladaDevtools.PiniaColadaDevtools()],
+      ),
     nitro({
       serverDir: './server',
       // alias: env.command === 'build' ? vueServerAliases : {},
