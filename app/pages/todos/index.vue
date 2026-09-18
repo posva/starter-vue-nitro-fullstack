@@ -79,7 +79,10 @@ const columns: TableColumn<Todo>[] = [
       :description="state.error?.message"
     />
 
-    <UCard v-else :ui="{ body: 'p-0 sm:p-0' }">
+    <UCard
+      v-if="asyncStatus === 'loading' || state.status !== 'error'"
+      :ui="{ body: 'p-0 sm:p-0' }"
+    >
       <UTable :data="state.data ?? []" :columns="columns" :loading="asyncStatus === 'loading'">
         <template #completed-cell="{ row }">
           <!-- Pending optimistic row: not on the server yet, so no operations. -->

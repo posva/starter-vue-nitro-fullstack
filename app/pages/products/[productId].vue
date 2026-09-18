@@ -42,8 +42,8 @@ const currency = new Intl.NumberFormat('en-US', { style: 'currency', currency: '
       :description="state.error?.message"
     />
 
-    <UCard v-else>
-      <div v-if="asyncStatus === 'loading' && !state.data" class="space-y-3">
+    <UCard v-if="asyncStatus === 'loading' || state.status !== 'error'">
+      <div v-if="asyncStatus === 'loading'" class="space-y-3">
         <USkeleton class="h-4 w-3/4" />
         <USkeleton class="h-4 w-1/2" />
       </div>
