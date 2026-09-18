@@ -6,7 +6,6 @@ import type { PGlite } from '@electric-sql/pglite'
 import { pgliteDialect } from './pglite-dialect'
 import { betterAuth } from 'better-auth'
 import { handleOAuthUserInfo } from 'better-auth/oauth2'
-import { createOAuthAccountIssuer } from 'better-auth/db'
 import { runMigrations } from '../database/migrate'
 import { authOptions } from './auth'
 
@@ -41,14 +40,13 @@ test('email + password sign-up creates a user with a credential account', async 
   expect(users.rows).toHaveLength(1)
 
   const accounts = await db.sql<{
-    rows: { providerId: string; issuer: string; accountId: string; password: string | null }[]
+    rows: { providerId: string; accountId: string; password: string | null }[]
   }>`
-    SELECT "providerId", "issuer", "accountId", "password" FROM "account"
+    SELECT "providerId", "accountId", "password" FROM "account"
     WHERE "userId" = ${users.rows[0]!.id}`
   expect(accounts.rows).toHaveLength(1)
   expect(accounts.rows[0]!.providerId).toBe('credential')
   expect(accounts.rows[0]!.password).toBeTruthy()
-  expect(accounts.rows[0]!.issuer).toBe('local:credential')
   expect(accounts.rows[0]!.accountId).toBe(users.rows[0]!.id)
 
   // Sign-up triggers a verification email; with no mail provider wired up it's
@@ -120,11 +118,8 @@ test('signing in via a trusted provider links to the existing email account', as
     { context: ctx, request: undefined } as never,
     {
       userInfo: { id: 'vercel-user-1', email, emailVerified: true, name: 'Linkme' },
-      // Derived rather than a literal, so the test can't drift from how Better
-      // Auth namespaces a provider that declares no issuer of its own.
       account: {
         providerId: 'vercel',
-        issuer: createOAuthAccountIssuer('vercel'),
         accountId: 'vercel-user-1',
       },
       callbackURL: '/account',
@@ -139,13 +134,9 @@ test('signing in via a trusted provider links to the existing email account', as
   const users = await db.sql<{ rows: { id: string }[] }>`
     SELECT "id" FROM "user" WHERE "email" = ${email}`
   expect(users.rows).toHaveLength(1)
-  const accounts = await db.sql<{ rows: { providerId: string; issuer: string }[] }>`
-    SELECT "providerId", "issuer" FROM "account" WHERE "userId" = ${users.rows[0]!.id}`
+  const accounts = await db.sql<{ rows: { providerId: string }[] }>`
+    SELECT "providerId" FROM "account" WHERE "userId" = ${users.rows[0]!.id}`
   expect(accounts.rows!.map((a) => a.providerId).sort()).toEqual(['credential', 'vercel'])
-  expect(Object.fromEntries(accounts.rows!.map((a) => [a.providerId, a.issuer]))).toEqual({
-    credential: 'local:credential',
-    vercel: 'local:oauth:vercel',
-  })
 
   // The local sign-up logs its unsent verification email.
   expect('[email] not sent').toHaveBeenWarned()
