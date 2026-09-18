@@ -24,8 +24,11 @@ test('applies every migration to an empty database, in order', async () => {
   expect(todos.rows).toEqual([])
   const users = await db.sql`SELECT "emailVerified" FROM "user"`
   expect(users.rows).toEqual([])
-  const accounts = await db.sql`SELECT "issuer", "accountId" FROM "account"`
+  const accounts = await db.sql`SELECT "providerId", "accountId" FROM "account"`
   expect(accounts.rows).toEqual([])
+  const accountColumns = await db.sql<{ rows: { column_name: string }[] }>`
+    SELECT column_name FROM information_schema.columns WHERE table_name = 'account'`
+  expect(accountColumns.rows.map(({ column_name }) => column_name)).not.toContain('issuer')
   const passkeys = await db.sql`SELECT "credentialID" FROM "passkey"`
   expect(passkeys.rows).toEqual([])
 })
